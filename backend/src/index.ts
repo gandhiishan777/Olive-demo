@@ -10,6 +10,7 @@ import { menuRouter } from "./routes/menu.js";
 import { ordersRouter } from "./routes/orders.js";
 import { callsRouter } from "./routes/calls.js";
 import { streamRouter } from "./routes/stream.js";
+import { requestId } from "./middleware/request-id.js";
 
 const app = new Hono();
 
@@ -20,7 +21,7 @@ app.use("*", cors({
   credentials: false,
 }));
 
-app.use("*", honoLogger((msg) => logger.debug(msg)));
+app.use("*", requestId);
 
 app.onError((err, c) => {
   logger.error({ err: err.message, stack: err.stack }, "unhandled error");

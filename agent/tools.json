@@ -159,7 +159,7 @@
       "headers": {
         "Content-Type": "application/json",
         "X-Olive-Token": "${OLIVE_AGENT_TOKEN}",
-        "Idempotency-Key": "${conversation_id}-${item_id}-${turn_index}"
+        "_idempotency_note": "ElevenLabs auto-retries tool calls on 5xx with the same body — letting their built-in dedup handle this is safer than a templated key. Do NOT add a custom Idempotency-Key header here. Backend tolerates duplicate add_item calls only when an Idempotency-Key is present, so omitting it ensures each retry is treated independently (a duplicate item is recoverable; a missed add_item is not)."
       },
       "path_parameters": [
         {
@@ -362,7 +362,7 @@
       "headers": {
         "Content-Type": "application/json",
         "X-Olive-Token": "${OLIVE_AGENT_TOKEN}",
-        "Idempotency-Key": "${conversation_id}-submit"
+        "Idempotency-Key": "{{system__conversation_id}}-submit"
       },
       "path_parameters": [
         {
@@ -393,6 +393,35 @@
       "error_responses": {
         "409 order_empty": "The order has no lines — you submitted too early. Apologize and ask if they meant to order anything.",
         "409 already_submitted": "Already submitted — do not call again. Just confirm the sign-off."
+      }
+    },
+    {
+      "name": "cancel_order",
+      "description": "Cancel the entire current order. Use ONLY when the caller explicitly says something like 'never mind', 'cancel the whole thing', 'forget it'. Do NOT use to cancel a single item — use remove_item for that. After calling this, the call is effectively over for ordering purposes; thank the caller and let them go.",
+      "method": "POST",
+      "url": "${BASE_URL}/orders/{order_id}/cancel",
+      "response_timeout_secs": 10,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Olive-Token": "${OLIVE_AGENT_TOKEN}"
+      },
+      "path_parameters": [
+        {
+          "name": "order_id",
+          "type": "integer",
+          "required": true,
+          "description": "Order id returned by create_order."
+        }
+      ],
+      "body_parameters": [],
+      "expected_response_schema": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string", "enum": ["cancelled"]}
+        }
+      },
+      "error_responses": {
+        "409 cannot_cancel": "Order is no longer open (already submitted or completed). If submitted, the order is going to the kitchen — say it's too late to cancel and suggest the caller call back when they pick up."
       }
     }
   ]

@@ -22,11 +22,16 @@ export function OrdersPanel({ pulseIds }: { pulseIds: Set<number> }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
   });
 
-  // When ANY order event arrives, invalidate the order queries
+  // When ANY order event arrives — OR the SSE reconnects after a drop —
+  // invalidate the order queries to resync state.
   useEffect(() => {
     const handler = () => qc.invalidateQueries({ queryKey: ["orders"] });
     window.addEventListener("olive:order-event", handler);
-    return () => window.removeEventListener("olive:order-event", handler);
+    window.addEventListener("olive:stream-reconnected", handler);
+    return () => {
+      window.removeEventListener("olive:order-event", handler);
+      window.removeEventListener("olive:stream-reconnected", handler);
+    };
   }, [qc]);
 
   return (

@@ -20,11 +20,15 @@ export function MenuPanel() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["all-items"] }),
   });
 
-  // Refresh when menu_update streams in
+  // Refresh on menu_update OR a stream reconnect (catch up after ngrok flap).
   useEffect(() => {
     const handler = () => qc.invalidateQueries({ queryKey: ["all-items"] });
     window.addEventListener("olive:menu-update", handler);
-    return () => window.removeEventListener("olive:menu-update", handler);
+    window.addEventListener("olive:stream-reconnected", handler);
+    return () => {
+      window.removeEventListener("olive:menu-update", handler);
+      window.removeEventListener("olive:stream-reconnected", handler);
+    };
   }, [qc]);
 
   const filtered = items.filter((i) => i.name.toLowerCase().includes(q.toLowerCase()) || i.category.toLowerCase().includes(q.toLowerCase()));

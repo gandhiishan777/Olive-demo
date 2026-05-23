@@ -62,7 +62,7 @@ menuRouter.get(
     `;
     const matches = items
       .map((i) => ({ id: i.id, name: i.name, in_stock: i.in_stock, score: fuzzyScore(q, i) }))
-      .filter((m) => m.score >= 0.4)
+      .filter((m) => m.score >= 0.35)
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
     return c.json({ matches });

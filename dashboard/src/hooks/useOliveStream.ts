@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { STREAM_PATH } from "../lib/api";
 
+function streamUrl(): string {
+  const token = localStorage.getItem("olive.token");
+  return token ? `${STREAM_PATH}?token=${encodeURIComponent(token)}` : STREAM_PATH;
+}
+
 export type StreamEventType =
   | "order_created"
   | "order_updated"
@@ -26,10 +31,13 @@ export function useOliveStream(onEvent: (ev: StreamEvent) => void) {
 
     const open = () => {
       if (cancelled) return;
-      es = new EventSource(STREAM_PATH);
+      es = new EventSource(streamUrl());
       es.onopen = () => {
         setConnected(true);
         retryDelay = 1000;
+        // After a reconnect, refresh anything that could have changed during
+        // the gap (the bus has no replay). Cheap to do unconditionally.
+        window.dispatchEvent(new CustomEvent("olive:stream-reconnected"));
       };
       es.onerror = () => {
         setConnected(false);

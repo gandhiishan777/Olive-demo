@@ -6,8 +6,8 @@ This folder is the **entire** voice-agent layer of Olive V0. No server code live
 
 | File | Purpose |
 |---|---|
-| `system_prompt.md` | The agent's full system prompt. Templated with `${RESTAURANT_NAME}`-style placeholders so the founders can retarget Olive to other restaurants later. Pasted into the ElevenLabs agent **System Prompt** field. |
-| `tools.json` | The 9 server tools the agent calls, mapped 1:1 to the REST endpoints in `docs/API_CONTRACT.md`. Imported into the ElevenLabs agent's **Tools** panel (or pasted tool-by-tool — see `SETUP.md`). |
+| `system_prompt.md` | The agent's full system prompt. **Pre-rendered for Paradise Biryani.** Search-and-replace the restaurant name, locations, and greeting line to retarget. Do NOT use `${VAR}` shell-style placeholders — ElevenLabs will ship them literally. Paste into the ElevenLabs agent **System Prompt** field. |
+| `tools.json` | The 10 server tools the agent calls, mapped 1:1 to the REST endpoints in `docs/API_CONTRACT.md`. Imported into the ElevenLabs agent's **Tools** panel (or pasted tool-by-tool — see `SETUP.md`). |
 | `SETUP.md` | Step-by-step operational guide: get the temp number, create the agent, pick voice/LLM, wire the tools, smoke test, migrate to Twilio. |
 | `transcripts/` | Empty folder. Drop call transcript JSONs here as you iterate. Gitkept. |
 

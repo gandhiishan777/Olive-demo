@@ -57,7 +57,7 @@ Keep this terminal open for the whole demo.
 2. Name it `Olive — Paradise Biryani (V0)`.
 3. Set the **First message** to the verbatim greeting:
    > `Thanks for calling Paradise Biryani! This is Olive — what can I get started for you?`
-4. **System prompt:** copy-paste the entire contents of `agent/system_prompt.md`. Replace any `${RESTAURANT_NAME}`, `${LOCATIONS_DESCRIPTION}`, `${GREETING_LINE}` placeholders inline if you want concrete text — the defaults (Paradise Biryani / 5 Bay Area locations) are already inlined as `${VAR:-default}` style, so leaving them is fine.
+4. **System prompt:** copy-paste the entire contents of `agent/system_prompt.md`. The file is **pre-rendered for Paradise Biryani** — restaurant name, location list, and greeting line are inline strings, not `${VAR}` templates. ElevenLabs does not expand shell-style placeholders, so any leftover `${VAR}` would ship verbatim. To retarget to another restaurant, edit the file before pasting.
 5. Save.
 
 ---

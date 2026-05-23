@@ -14,6 +14,20 @@ import {
 import { bus } from "../lib/events.js";
 import { requireToken } from "../middleware/auth.js";
 import { getCached, setCached } from "../lib/idempotency.js";
+import { env } from "../lib/env.js";
+
+function localPickupTime(isoUtc: string): string {
+  // Format pickup ETA in the restaurant's timezone, e.g. "7:52 PM".
+  try {
+    return new Date(isoUtc).toLocaleTimeString("en-US", {
+      timeZone: env.RESTAURANT_TIMEZONE,
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return isoUtc;
+  }
+}
 
 export const ordersRouter = new Hono();
 ordersRouter.use("*", requireToken);
@@ -42,8 +56,14 @@ ordersRouter.post(
       if (hit) return c.json(hit.body as object, hit.status as 200);
     }
 
-    // Re-use existing open order for the same conversation
-    const existingRows = await sql<Pick<Order, "id">[]>`SELECT id FROM orders WHERE conversation_id = ${conversation_id} LIMIT 1`;
+    // Re-use existing OPEN order for the same conversation.
+    // Filtering by status='open' avoids soft-locking the agent on a cancelled/submitted order
+    // (e.g. when /calls/ended auto-cancels and the same conversation_id is somehow reused).
+    const existingRows = await sql<Pick<Order, "id">[]>`
+      SELECT id FROM orders
+       WHERE conversation_id = ${conversation_id} AND status = 'open'
+       ORDER BY created_at DESC LIMIT 1
+    `;
     if (existingRows[0]) {
       const order = (await getOrder(existingRows[0].id))!;
       const body = { id: order.id, status: order.status, total_cents: order.total_cents, order_number: order.order_number, lines: order.lines };
@@ -108,10 +128,6 @@ ordersRouter.post(
       if (hit) return c.json(hit.body as object, hit.status as 200);
     }
 
-    const [order] = await sql<Pick<Order, "status">[]>`SELECT status FROM orders WHERE id = ${orderId}`;
-    if (!order) return c.json({ error: { code: "not_found", message: "order not found" } }, 404);
-    if (order.status !== "open") return c.json({ error: { code: "order_locked", message: `order is ${order.status}` } }, 409);
-
     const [item] = await sql<Item[]>`
       SELECT id, name, price_cents, in_stock, spice_levels
       FROM items WHERE id = ${item_id}
@@ -119,7 +135,6 @@ ordersRouter.post(
     if (!item) return c.json({ error: { code: "item_not_found", message: "item not found" } }, 404);
     if (!item.in_stock) return c.json({ error: { code: "item_out_of_stock", message: `${item.name} is currently unavailable` } }, 409);
 
-    // Validate modifiers
     if (modifiers?.spice_level && item.spice_levels.length > 0 && !item.spice_levels.includes(modifiers.spice_level)) {
       return c.json({ error: { code: "invalid_modifier", message: `spice_level ${modifiers.spice_level} not available for ${item.name}` } }, 400);
     }
@@ -127,12 +142,22 @@ ordersRouter.post(
       return c.json({ error: { code: "invalid_modifier", message: `${item.name} does not accept a spice level` } }, 400);
     }
 
-    const [line] = await sql<[{ id: number }]>`
+    // Atomic: only INSERT if the order is still open. Closes the
+    // submit-vs-add_item race (line lands on a submitted order otherwise).
+    const inserted = await sql<Array<{ id: number }>>`
       INSERT INTO order_lines (order_id, item_id, item_name, quantity, unit_price_cents, modifiers, notes)
-      VALUES (${orderId}, ${item.id}, ${item.name}, ${quantity}, ${item.price_cents}, ${sql.json((modifiers ?? {}) as never)}, ${notes ?? null})
+      SELECT ${orderId}, ${item.id}, ${item.name}, ${quantity}, ${item.price_cents}, ${sql.json((modifiers ?? {}) as never)}, ${notes ?? null}
+       WHERE EXISTS (SELECT 1 FROM orders WHERE id = ${orderId} AND status = 'open')
       RETURNING id
     `;
-    const lineId = line!.id;
+    const line = inserted[0];
+    if (!line) {
+      // Either the order doesn't exist OR it was just locked. Disambiguate.
+      const [existing] = await sql<Pick<Order, "status">[]>`SELECT status FROM orders WHERE id = ${orderId}`;
+      if (!existing) return c.json({ error: { code: "not_found", message: "order not found" } }, 404);
+      return c.json({ error: { code: "order_locked", message: `order is ${existing.status}` } }, 409);
+    }
+    const lineId = line.id;
     const total = await recomputeTotal(orderId);
     bus.emitEvent({ type: "order_updated", data: await getOrder(orderId) });
     const body = {
@@ -219,11 +244,18 @@ ordersRouter.post(
       const result = await submitOrder(orderId);
       const order = (await getOrder(orderId))!;
       bus.emitEvent({ type: "order_submitted", data: order });
-      if (idemKey) setCached(idemScope, idemKey, 200, result);
-      return c.json(result);
+      const withLocalTime = { ...result, pickup_eta_local: localPickupTime(result.pickup_eta), timezone: env.RESTAURANT_TIMEZONE };
+      if (idemKey) setCached(idemScope, idemKey, 200, withLocalTime);
+      return c.json(withLocalTime);
     } catch (err) {
       if (err instanceof HttpError) {
         return c.json({ error: { code: err.code, message: err.message } }, err.status as 400);
+      }
+      // Postgres unique violation on order_number → translate to friendly 409
+      // so the agent can recover instead of escalating.
+      const pgErr = err as { code?: string } | undefined;
+      if (pgErr?.code === "23505") {
+        return c.json({ error: { code: "already_submitted", message: "order already submitted" } }, 409);
       }
       throw err;
     }
