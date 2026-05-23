@@ -1,0 +1,31 @@
+{
+  "name": "@olive/noise-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Noise-resilience test harness for the Olive V0 voice agent. Mixes clean speech with noise at varying SNR, runs STT, computes Word Error Rate, and emits a JSON report. Proves (or disproves) the BUILD_SPEC's >=85% order-accuracy-under-noise claim.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "olive-noise-tests": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "run": "tsx src/index.ts",
+    "record-baseline": "tsx src/index.ts --scenario=all --snr=quiet --output=results/baseline.json",
+    "help": "tsx src/index.ts --help",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@deepgram/sdk": "^3.9.0",
+    "dotenv": "^16.4.5",
+    "openai": "^4.67.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

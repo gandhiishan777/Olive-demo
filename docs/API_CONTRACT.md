@@ -104,6 +104,11 @@ Returns `MenuCompact` for **in-stock items only**. Used by agent at conversation
 { "items": [...], "generated_at": "2026-05-22T19:30:00Z" }
 ```
 
+### `GET /items`
+Full list of all items including out-of-stock. Used by the dashboard menu-management panel. Public read.
+
+**200** `{ "items": Item[] }`
+
 ### `GET /items/:id`
 Full `Item` (used by agent for ingredient / allergen / prep-time questions).
 

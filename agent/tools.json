@@ -1,0 +1,399 @@
+{
+  "_comment": "ElevenLabs Conversational AI Server Tools for the Olive agent. Paste each tool below as a separate Server Tool in the ElevenLabs agent dashboard. Replace ${BASE_URL} with your ngrok URL (e.g. https://your-name.ngrok.app) and ${OLIVE_AGENT_TOKEN} with the backend's OLIVE_AGENT_TOKEN env value. The 'conversation_id' parameter on write tools should be wired to the ElevenLabs system dynamic variable 'system__conversation_id' (NOT LLM-provided).",
+  "_placeholders": {
+    "BASE_URL": "https://<your-ngrok-subdomain>.ngrok.app",
+    "OLIVE_AGENT_TOKEN": "<value from backend .env>"
+  },
+  "_auto_call_on_start": ["get_menu"],
+  "tools": [
+    {
+      "name": "get_menu",
+      "description": "Fetch the current in-stock menu (compact form: id, name, price, category, spice options, veg flag, short description). Call this ONCE at the very start of the call, and AGAIN whenever the caller has paused for more than ~60 seconds or whenever you suspect the menu may have changed (an item was just reported out-of-stock, etc.). This is your source of truth for what's available — never name a dish to the caller that isn't in the most recent response from this tool.",
+      "method": "GET",
+      "url": "${BASE_URL}/menu",
+      "response_timeout_secs": 10,
+      "headers": {},
+      "query_parameters": [],
+      "body_parameters": [],
+      "expected_response_schema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {"type": "integer"},
+                "name": {"type": "string"},
+                "price_cents": {"type": "integer"},
+                "category": {"type": "string"},
+                "spice_levels": {"type": "array", "items": {"type": "string"}},
+                "is_vegetarian": {"type": "boolean"},
+                "short_desc": {"type": "string"}
+              }
+            }
+          },
+          "generated_at": {"type": "string", "format": "date-time"}
+        }
+      }
+    },
+    {
+      "name": "get_item_details",
+      "description": "Fetch FULL details for one menu item: full description, ingredients, allergens, prep_minutes, all spice levels, vegetarian/vegan/gluten-free flags, in_stock. Call this when the caller asks about ingredients ('what's in the X?'), allergens ('does it have nuts?'), spice options, or prep time. Also call this to verify a borderline item exists and is in stock before adding it.",
+      "method": "GET",
+      "url": "${BASE_URL}/items/{id}",
+      "response_timeout_secs": 10,
+      "headers": {},
+      "path_parameters": [
+        {
+          "name": "id",
+          "type": "integer",
+          "required": true,
+          "description": "The integer item id from get_menu or search_menu."
+        }
+      ],
+      "query_parameters": [],
+      "body_parameters": [],
+      "expected_response_schema": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "name": {"type": "string"},
+          "description": {"type": "string"},
+          "price_cents": {"type": "integer"},
+          "in_stock": {"type": "boolean"},
+          "allergens": {"type": "array", "items": {"type": "string"}},
+          "spice_levels": {"type": "array", "items": {"type": "string"}},
+          "prep_minutes": {"type": "integer"},
+          "category": {"type": "string"},
+          "ingredients": {"type": "array", "items": {"type": "string"}},
+          "is_vegetarian": {"type": "boolean"},
+          "is_vegan": {"type": "boolean"},
+          "is_gluten_free": {"type": "boolean"}
+        }
+      },
+      "error_responses": {
+        "404": "Item not found — apologize and offer something from get_menu instead."
+      }
+    },
+    {
+      "name": "search_menu",
+      "description": "Fuzzy search the menu by name or description. Call this when the caller says something close-but-not-exact ('biriyani', 'tikka thing', 'the lamb one') or anything you're not sure maps to a specific dish. Returns up to 5 ranked matches with id, name, score, and in_stock. If 0 matches: it's not on the menu — do NOT invent it. If >1 match: ask the caller which one they meant.",
+      "method": "GET",
+      "url": "${BASE_URL}/menu/search",
+      "response_timeout_secs": 10,
+      "headers": {},
+      "query_parameters": [
+        {
+          "name": "q",
+          "type": "string",
+          "required": true,
+          "description": "The phrase the caller said, as you heard it. Doesn't need to be cleaned up — fuzzy match handles approximations and mispronunciations."
+        }
+      ],
+      "body_parameters": [],
+      "expected_response_schema": {
+        "type": "object",
+        "properties": {
+          "matches": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {"type": "integer"},
+                "name": {"type": "string"},
+                "score": {"type": "number"},
+                "in_stock": {"type": "boolean"}
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "create_order",
+      "description": "Open a brand-new empty order for this call. Call this exactly ONCE per call, the first time the caller wants to actually order something (not for menu questions). Returns the order id — save it and reuse it for every subsequent add_item, update_item, remove_item, get_order, and submit_order in this call.",
+      "method": "POST",
+      "url": "${BASE_URL}/orders",
+      "response_timeout_secs": 10,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Olive-Token": "${OLIVE_AGENT_TOKEN}"
+      },
+      "query_parameters": [],
+      "body_parameters": [
+        {
+          "name": "conversation_id",
+          "type": "string",
+          "required": true,
+          "value_source": "dynamic_variable",
+          "dynamic_variable": "system__conversation_id",
+          "description": "The ElevenLabs conversation id. Wire this to the system dynamic variable 'system__conversation_id' in the dashboard — NOT LLM-provided."
+        },
+        {
+          "name": "customer_phone",
+          "type": "string",
+          "required": false,
+          "value_source": "dynamic_variable",
+          "dynamic_variable": "system__caller_id",
+          "description": "Caller's phone number in E.164. Wire to ElevenLabs dynamic variable 'system__caller_id' if available; otherwise omit."
+        }
+      ],
+      "expected_response_schema": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer", "description": "The order_id to use in subsequent tool calls."},
+          "status": {"type": "string"},
+          "total_cents": {"type": "integer"},
+          "order_number": {"type": ["string", "null"]},
+          "lines": {"type": "array"}
+        }
+      }
+    },
+    {
+      "name": "add_item",
+      "description": "Add ONE line item to the current order. Call this for each distinct item the caller asks for. Quantity defaults to 1 if omitted. Modifiers (spice level, no_onions, no_garlic, extras) should be gathered BEFORE calling. If the response is 409 item_out_of_stock, apologize and offer an alternative from the latest menu. If 400 invalid_modifier, drop the offending modifier and ask the caller for a valid option.",
+      "method": "POST",
+      "url": "${BASE_URL}/orders/{order_id}/items",
+      "response_timeout_secs": 10,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Olive-Token": "${OLIVE_AGENT_TOKEN}",
+        "Idempotency-Key": "${conversation_id}-${item_id}-${turn_index}"
+      },
+      "path_parameters": [
+        {
+          "name": "order_id",
+          "type": "integer",
+          "required": true,
+          "description": "Order id returned by create_order at the start of this call."
+        }
+      ],
+      "query_parameters": [],
+      "body_parameters": [
+        {
+          "name": "item_id",
+          "type": "integer",
+          "required": true,
+          "description": "Menu item id from get_menu or search_menu. Never invent an id — use only ids that came back from a tool response."
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "description": "How many. 'A couple' = 2, 'a few' = 3. Ask if ambiguous."
+        },
+        {
+          "name": "modifiers",
+          "type": "object",
+          "required": false,
+          "description": "Object with optional keys: spice_level ('mild'|'medium'|'hot'|'extra_hot'), no_onions (bool), no_garlic (bool), extra (array of strings like ['extra raita']). Only set keys the caller actually requested.",
+          "properties": {
+            "spice_level": {"type": "string", "enum": ["mild", "medium", "hot", "extra_hot"]},
+            "no_onions": {"type": "boolean"},
+            "no_garlic": {"type": "boolean"},
+            "extra": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        {
+          "name": "notes",
+          "type": "string",
+          "required": false,
+          "description": "Free-text special instruction the caller gave. Keep brief — one sentence max."
+        }
+      ],
+      "expected_response_schema": {
+        "type": "object",
+        "properties": {
+          "line_id": {"type": "integer"},
+          "item_name": {"type": "string"},
+          "unit_price_cents": {"type": "integer"},
+          "running_total_cents": {"type": "integer"}
+        }
+      },
+      "error_responses": {
+        "404": "item_not_found — the item_id is wrong. Re-run search_menu.",
+        "409": "item_out_of_stock — apologize and offer an alternative from the same category.",
+        "400": "invalid_modifier — modifier not valid for this item (e.g. spice_level on a dessert). Drop it and try again."
+      }
+    },
+    {
+      "name": "update_item",
+      "description": "Update an existing line on the order. Use this to change quantity ('make that two'), spice level ('change to hot'), modifiers ('actually no onions'), or notes. Pass only the fields you want to change. Use the line_id returned by add_item.",
+      "method": "PATCH",
+      "url": "${BASE_URL}/orders/{order_id}/items/{line_id}",
+      "response_timeout_secs": 10,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Olive-Token": "${OLIVE_AGENT_TOKEN}"
+      },
+      "path_parameters": [
+        {
+          "name": "order_id",
+          "type": "integer",
+          "required": true,
+          "description": "Order id."
+        },
+        {
+          "name": "line_id",
+          "type": "integer",
+          "required": true,
+          "description": "Line id from the original add_item response (or get_order)."
+        }
+      ],
+      "query_parameters": [],
+      "body_parameters": [
+        {
+          "name": "quantity",
+          "type": "integer",
+          "required": false,
+          "minimum": 1,
+          "description": "New quantity. Omit if not changing."
+        },
+        {
+          "name": "modifiers",
+          "type": "object",
+          "required": false,
+          "description": "Replacement modifiers object. Sending this REPLACES the existing modifiers — include all keys you want to keep.",
+          "properties": {
+            "spice_level": {"type": "string", "enum": ["mild", "medium", "hot", "extra_hot"]},
+            "no_onions": {"type": "boolean"},
+            "no_garlic": {"type": "boolean"},
+            "extra": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        {
+          "name": "notes",
+          "type": ["string", "null"],
+          "required": false,
+          "description": "New notes (or null to clear)."
+        }
+      ],
+      "expected_response_schema": {
+        "type": "object",
+        "properties": {
+          "line_id": {"type": "integer"},
+          "running_total_cents": {"type": "integer"}
+        }
+      }
+    },
+    {
+      "name": "remove_item",
+      "description": "Remove a line entirely from the order. Use when the caller says 'actually skip the X', 'cancel the Y', 'never mind the naan'. Identify the line by line_id (from add_item response or get_order).",
+      "method": "DELETE",
+      "url": "${BASE_URL}/orders/{order_id}/items/{line_id}",
+      "response_timeout_secs": 10,
+      "headers": {
+        "X-Olive-Token": "${OLIVE_AGENT_TOKEN}"
+      },
+      "path_parameters": [
+        {
+          "name": "order_id",
+          "type": "integer",
+          "required": true,
+          "description": "Order id."
+        },
+        {
+          "name": "line_id",
+          "type": "integer",
+          "required": true,
+          "description": "Line id to remove."
+        }
+      ],
+      "query_parameters": [],
+      "body_parameters": [],
+      "expected_response_schema": {
+        "type": "object",
+        "properties": {
+          "running_total_cents": {"type": "integer"}
+        }
+      }
+    },
+    {
+      "name": "get_order",
+      "description": "Get the canonical current state of the order: all lines (item name, quantity, modifiers, unit price), and total. MUST be called immediately before every read-back so you read from server truth, not memory.",
+      "method": "GET",
+      "url": "${BASE_URL}/orders/{order_id}",
+      "response_timeout_secs": 10,
+      "headers": {},
+      "path_parameters": [
+        {
+          "name": "order_id",
+          "type": "integer",
+          "required": true,
+          "description": "Order id."
+        }
+      ],
+      "query_parameters": [],
+      "body_parameters": [],
+      "expected_response_schema": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "status": {"type": "string"},
+          "total_cents": {"type": "integer"},
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {"type": "integer"},
+                "item_id": {"type": "integer"},
+                "item_name": {"type": "string"},
+                "quantity": {"type": "integer"},
+                "unit_price_cents": {"type": "integer"},
+                "modifiers": {"type": "object"},
+                "notes": {"type": ["string", "null"]}
+              }
+            }
+          },
+          "order_number": {"type": ["string", "null"]},
+          "pickup_eta": {"type": ["string", "null"]}
+        }
+      }
+    },
+    {
+      "name": "submit_order",
+      "description": "Finalize the order and send it to the kitchen. Call ONLY AFTER reading back the order and the caller has explicitly confirmed ('yes', 'send it', 'that's right'). Returns the order_number (e.g. 'P-1042'), total, eta_minutes, and pickup_eta. After this succeeds, the call wraps up — do NOT add more items.",
+      "method": "POST",
+      "url": "${BASE_URL}/orders/{order_id}/submit",
+      "response_timeout_secs": 15,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Olive-Token": "${OLIVE_AGENT_TOKEN}",
+        "Idempotency-Key": "${conversation_id}-submit"
+      },
+      "path_parameters": [
+        {
+          "name": "order_id",
+          "type": "integer",
+          "required": true,
+          "description": "Order id."
+        }
+      ],
+      "query_parameters": [],
+      "body_parameters": [
+        {
+          "name": "customer_name",
+          "type": "string",
+          "required": true,
+          "description": "Name the caller gave for the order. Ask 'Can I get a name for the order?' before this call."
+        }
+      ],
+      "expected_response_schema": {
+        "type": "object",
+        "properties": {
+          "order_number": {"type": "string", "description": "Human-readable order number like 'P-1042'. Read this back to the caller."},
+          "total_cents": {"type": "integer"},
+          "eta_minutes": {"type": "integer", "description": "Pickup ETA in minutes. Round to nearest 5 when speaking."},
+          "pickup_eta": {"type": "string", "format": "date-time"}
+        }
+      },
+      "error_responses": {
+        "409 order_empty": "The order has no lines — you submitted too early. Apologize and ask if they meant to order anything.",
+        "409 already_submitted": "Already submitted — do not call again. Just confirm the sign-off."
+      }
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+name,description,price,category,allergens,spice_levels,ingredients,is_vegetarian,is_vegan,is_gluten_free,prep_minutes
+Chicken Biryani,Aromatic basmati rice with marinated chicken and saffron,$16.99,biryani,dairy,mild;medium;hot,basmati;chicken;yogurt;saffron,false,false,true,22
+Vegetable Biryani,Mixed vegetable basmati biryani,14.99,biryani,dairy,mild;medium,basmati;potatoes;peas;cauliflower,true,false,true,20
+Butter Chicken,Tandoor chicken in creamy tomato gravy,$15.99,curry,dairy,mild;medium;hot,chicken;tomato;cream;butter,false,false,true,18
+Garlic Naan,Tandoor flatbread with garlic and butter,$3.99,bread,gluten;dairy,,wheat flour;butter;garlic,true,false,false,6
+Mango Lassi,Yogurt drink with mango,$4.50,drink,dairy,,yogurt;mango;sugar,true,false,true,3

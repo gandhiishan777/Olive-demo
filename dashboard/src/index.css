@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body { font-feature-settings: "cv11", "ss01"; }
+
+/* Subtle scrollbar inside panels */
+.thin-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.thin-scroll::-webkit-scrollbar-thumb { background: rgba(123,31,43,0.25); border-radius: 3px; }
+.thin-scroll::-webkit-scrollbar-track { background: transparent; }
