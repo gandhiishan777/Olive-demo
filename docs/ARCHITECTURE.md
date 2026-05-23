@@ -33,10 +33,19 @@
        ┌─────────────────────────────────────────────────────────────────────────────┐
        │  Backend (Hono / Node 20)                                                   │
        │  - REST endpoints (docs/API_CONTRACT.md)                                    │
-       │  - SQLite via better-sqlite3 (backend/data/olive.db)                        │
-       │  - SSE stream: /orders/stream                                               │
+       │  - Postgres via postgres.js → Supabase (session pooler)                     │
+       │  - SSE stream: /orders/stream (in-process EventEmitter — Supabase Realtime  │
+       │    intentionally NOT used; backend is the only writer)                      │
        │  - Rate limit + idempotency + token auth                                    │
        └────────────┬────────────────────────────────────────────────────────────────┘
+                    │                                                ▲
+                    │ TCP (port 5432)                                │ Supabase Studio
+                    ▼                                                │ (founder edits menu)
+       ┌──────────────────────────────────────────────────┐         │
+       │  Supabase Postgres                               │─────────┘
+       │  - items, orders, order_lines, calls             │
+       │  - order_number_seq (sequence)                   │
+       └──────────────────────────────────────────────────┘
                     │
                     │ SSE (live updates)
                     ▼

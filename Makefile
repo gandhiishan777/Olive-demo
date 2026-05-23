@@ -3,8 +3,8 @@
 install:
 	pnpm install
 
-seed:
-	pnpm --filter @olive/backend seed
+smoke:
+	pnpm --filter @olive/backend smoke
 
 backend:
 	pnpm --filter @olive/backend dev

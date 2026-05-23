@@ -7,7 +7,7 @@
     "demo": "make demo",
     "backend": "pnpm --filter @olive/backend dev",
     "dashboard": "pnpm --filter @olive/dashboard dev",
-    "seed": "pnpm --filter @olive/backend seed",
+    "smoke": "pnpm --filter @olive/backend smoke",
     "seed:menu": "pnpm --filter @olive/seed parse",
     "noise:test": "pnpm --filter @olive/noise-tests run",
     "tunnel": "ngrok http --domain=$NGROK_DOMAIN 8787"

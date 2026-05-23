@@ -10,10 +10,11 @@ pnpm install
 
 # 2. Fill in .env
 cp .env.example .env
-$EDITOR .env                # set OLIVE_AGENT_TOKEN, ELEVENLABS_*, ANTHROPIC_API_KEY
+$EDITOR .env                # set SUPABASE_DB_URL, OLIVE_AGENT_TOKEN, ELEVENLABS_*, ANTHROPIC_API_KEY
 
-# 3. Seed placeholder menu
-pnpm seed
+# 3. Apply DB migrations (once, in Supabase SQL editor)
+# Paste backend/migrations/002_add_missing_columns.sql → Run
+# Copy + customize backend/migrations/003_populate_existing_rows.sql.template → Run
 
 # 4. Start everything (backend + dashboard + ngrok tunnel)
 make demo                   # requires tmux. Or run the 3 commands manually:
@@ -24,7 +25,10 @@ make demo                   # requires tmux. Or run the 3 commands manually:
 # 5. Wire ElevenLabs agent (one-time setup)
 # Open agent/SETUP.md and follow the 5-step checklist.
 
-# 6. Dial 574-626-6385 and try ordering chicken biryani.
+# 6. Smoke-test the wiring:
+OLIVE_AGENT_TOKEN=<your-token> pnpm --filter @olive/backend smoke
+
+# 7. Dial 574-626-6385 and try ordering chicken biryani.
 ```
 
 Dashboard at <http://localhost:5173>.
@@ -37,7 +41,8 @@ Backend at <http://localhost:8787>.
 ├── backend/        Hono + SQLite REST API (the "Toast clone")
 ├── dashboard/      React + Vite + Tailwind SPA
 ├── agent/          ElevenLabs Conversational AI config (system_prompt, tools.json)
-├── seed/           Menu ingest pipeline + placeholder menu
+├── seed/           Menu ingest pipeline (real menu lives in Supabase)
+├── backend/migrations/  SQL migrations to run in Supabase SQL editor
 ├── tests/noise/    Noise-resilience test harness
 ├── docs/           Stack decision, API contract, architecture, setup guides
 └── tasks/          Build plan + lessons

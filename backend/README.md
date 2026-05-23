@@ -1,16 +1,24 @@
 # Backend — Olive V0
 
-Hono + SQLite REST API. The "Toast clone" that the voice agent and dashboard both talk to.
+Hono + Supabase Postgres REST API. The "Toast clone" that the voice agent and dashboard both talk to.
+
+## One-time setup (Supabase)
+
+1. In Supabase dashboard → Project Settings → Database → **Connection string** → copy the **Session pooler** URL into `.env` as `SUPABASE_DB_URL`.
+2. Open Supabase SQL editor, paste contents of [`migrations/002_add_missing_columns.sql`](migrations/002_add_missing_columns.sql), run. Adds the columns the API contract needs (spice_levels, prep_minutes, category, ingredients, dietary flags, customer_phone, completed_at, pickup_eta, order_number, modifiers, calls table, order-number sequence). Safe to re-run.
+3. Copy `migrations/003_populate_existing_rows.sql.template` → `migrations/003_populate_existing_rows.sql`. Edit the `LIKE` patterns to match Paradise Biryani's real menu item names. Paste into SQL editor. Run. Verify with:
+   ```sql
+   SELECT name, category, prep_minutes, spice_levels FROM items WHERE category = 'side';
+   ```
+   Anything still in `side` needs an explicit `UPDATE` rule.
 
 ## Run
 
 ```bash
-# From repo root, after `cp ../.env.example .env` and setting OLIVE_AGENT_TOKEN
-pnpm --filter @olive/backend seed       # loads seed/placeholder_menu.json
+# .env at repo root must have SUPABASE_DB_URL + OLIVE_AGENT_TOKEN
 pnpm --filter @olive/backend dev        # http://localhost:8787
-
 # Or from this folder:
-pnpm seed && pnpm dev
+pnpm dev
 ```
 
 Verify:
@@ -18,16 +26,23 @@ Verify:
 ```bash
 curl -s http://localhost:8787/healthz       # → {"ok":true,"db":true,"version":"0.1.0"}
 curl -s http://localhost:8787/menu | jq .   # → list of in-stock items
+
+# Full smoke test (lifecycle, auth, 86 reject, submit, complete):
+OLIVE_AGENT_TOKEN=<your-token> pnpm smoke
 ```
 
 ## Architecture
 
 ```
+migrations/
+├── 001_baseline.sql                          (informational only)
+├── 002_add_missing_columns.sql               run once in Supabase
+├── 003_populate_existing_rows.sql.template   template; copy + customize
+└── README.md
 src/
-├── index.ts                Hono server entrypoint
+├── index.ts                Hono server entrypoint (start() pings DB before serving)
 ├── db/
-│   ├── schema.sql          SQLite schema (items, orders, order_lines, calls, counters)
-│   └── index.ts            better-sqlite3 init + order-number counter
+│   └── index.ts            postgres.js client; auto-detects session vs transaction pooler
 ├── lib/
 │   ├── env.ts              zod-validated env loading
 │   ├── logger.ts           pino with pretty dev output
@@ -45,7 +60,7 @@ src/
 │   ├── calls.ts            POST /calls/started, /calls/ended, /calls/transcript_chunk
 │   └── stream.ts           GET /orders/stream (SSE)
 └── scripts/
-    ├── seed.ts             pnpm seed
+    ├── smoke.ts            curl-based E2E smoke test (`pnpm smoke`)
     └── dev-tools.ts        list-orders / clear-test-orders
 ```
 
@@ -105,24 +120,27 @@ If exceeded, `POST /calls/started` returns `{allow:false, reason:"rate_limit"|"d
 
 ## Tests
 
+Unit tests:
+
 ```bash
 pnpm test
-# 17 passing
+# 5 passing (fuzzy search)
 ```
 
-Coverage:
-- Menu fetch + in-stock filter
-- Item detail
-- Fuzzy search (typo: `biriyani` → Chicken Biryani)
-- Auth (rejects without token, accepts with token)
-- Full order lifecycle (create → add multiple items → submit)
-- `409 item_out_of_stock` for 86'd items
-- `400 invalid_modifier` for invalid spice_level
-- `409 order_empty` for empty submit
-- Idempotency on add_item (same line, not duplicated)
-- 86 toggle (PATCH /items/:id/stock)
+Integration tests against SQLite were dropped when we switched to Supabase Postgres. The end-to-end equivalent is `pnpm smoke` — runs against a real (running) backend + Supabase. Coverage:
 
-Tests use a fresh test DB at `data/olive.test.db` per run.
+- `/healthz` ping
+- `/menu` returns items
+- `/items` full list (in + out of stock)
+- `/items/:id` detail
+- `/menu/search` fuzzy
+- Write without token → **401**
+- Create order → add item → get order → submit (P-#### + ETA)
+- Out-of-stock item → **409 item_out_of_stock**
+- Re-submit submitted order → **409 already_submitted**
+- Mark complete → **200**
+
+The smoke test leaves a single test order in `completed` status. Clear with `pnpm dev-tools clear-test-orders` if you want a clean slate before the real demo.
 
 ## Adding an endpoint
 
@@ -134,8 +152,10 @@ Tests use a fresh test DB at `data/olive.test.db` per run.
 
 ## Gotchas
 
-- Money is **always integer cents**. Never float. The DB has no money type.
+- Money is **always integer cents**. Never float. Postgres has no money type we use; `price_cents` is `int4`.
 - `order_lines.item_name` and `unit_price_cents` are **snapshots** — items can be renamed or repriced after the line is added; the line keeps its original copy.
-- Total is computed on every mutation via `recomputeTotal(orderId)` and stored on the order row. We don't denormalize per-line totals.
-- `better-sqlite3` is **synchronous**. That's fine for our scale (< 100 req/sec). Don't `await` DB calls — they're not promises.
+- Total is recomputed via a single `UPDATE … SET total_cents = (SELECT SUM …)` query, so concurrent line edits can't race.
+- `postgres.js` is **fully async**. Every DB call is `await sql\`…\``. No prepared-statement objects.
 - The SSE route uses `streamSSE` from Hono. The keepalive ping every 25s prevents reverse-proxies (ngrok) from killing the connection on idle.
+- The order-number prefix is the first letter of `RESTAURANT_NAME` env var (default `P` for Paradise). The number comes from a Postgres sequence (`order_number_seq`), started at 1042.
+- **`SUPABASE_DB_URL` is required** at startup (except in test mode). The backend exits 1 if it can't ping the DB.

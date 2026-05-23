@@ -1,22 +1,34 @@
-import { db, nextOrderNumber } from "../db/index.js";
+import { sql, nextOrderNumber } from "../db/index.js";
 
-export type DbItem = {
+export type Item = {
   id: number;
   name: string;
   description: string;
   price_cents: number;
-  in_stock: number;
-  allergens: string;
-  spice_levels: string;
+  in_stock: boolean;
+  allergens: string[];
+  spice_levels: string[];
   prep_minutes: number;
   category: string;
-  ingredients: string;
-  is_vegetarian: number;
-  is_vegan: number;
-  is_gluten_free: number;
+  ingredients: string[];
+  is_vegetarian: boolean;
+  is_vegan: boolean;
+  is_gluten_free: boolean;
 };
 
-export type DbOrder = {
+export type OrderLine = {
+  id: number;
+  order_id: number;
+  item_id: number;
+  item_name: string;
+  quantity: number;
+  unit_price_cents: number;
+  modifiers: Record<string, unknown>;
+  notes: string | null;
+  created_at?: string;
+};
+
+export type Order = {
   id: number;
   status: string;
   customer_name: string | null;
@@ -28,94 +40,68 @@ export type DbOrder = {
   submitted_at: string | null;
   completed_at: string | null;
   pickup_eta: string | null;
+  lines: OrderLine[];
 };
 
-export type DbOrderLine = {
-  id: number;
-  order_id: number;
-  item_id: number;
-  item_name: string;
-  quantity: number;
-  unit_price_cents: number;
-  modifiers: string;
-  notes: string | null;
-};
-
-export type Item = Omit<DbItem, "in_stock" | "is_vegetarian" | "is_vegan" | "is_gluten_free" | "allergens" | "spice_levels" | "ingredients"> & {
-  in_stock: boolean;
-  is_vegetarian: boolean;
-  is_vegan: boolean;
-  is_gluten_free: boolean;
-  allergens: string[];
-  spice_levels: string[];
-  ingredients: string[];
-};
-
-export type OrderLine = Omit<DbOrderLine, "modifiers"> & {
-  modifiers: Record<string, unknown>;
-};
-
-export type Order = DbOrder & { lines: OrderLine[] };
-
-export function hydrateItem(row: DbItem): Item {
-  return {
-    ...row,
-    in_stock: !!row.in_stock,
-    is_vegetarian: !!row.is_vegetarian,
-    is_vegan: !!row.is_vegan,
-    is_gluten_free: !!row.is_gluten_free,
-    allergens: JSON.parse(row.allergens),
-    spice_levels: JSON.parse(row.spice_levels),
-    ingredients: JSON.parse(row.ingredients),
-  };
-}
-
-export function hydrateLine(row: DbOrderLine): OrderLine {
-  return { ...row, modifiers: JSON.parse(row.modifiers) };
-}
-
-export function getOrder(id: number): Order | undefined {
-  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(id) as DbOrder | undefined;
+export async function getOrder(id: number): Promise<Order | undefined> {
+  const orderRows = await sql<Omit<Order, "lines">[]>`
+    SELECT id, status, customer_name, customer_phone, conversation_id, total_cents,
+           order_number, created_at, submitted_at, completed_at, pickup_eta
+    FROM orders WHERE id = ${id}
+  `;
+  const order = orderRows[0];
   if (!order) return undefined;
-  const lines = db.prepare("SELECT * FROM order_lines WHERE order_id = ? ORDER BY id").all(id) as DbOrderLine[];
-  return { ...order, lines: lines.map(hydrateLine) };
+  const lines = await sql<OrderLine[]>`
+    SELECT id, order_id, item_id, item_name, quantity, unit_price_cents, modifiers, notes
+    FROM order_lines WHERE order_id = ${id} ORDER BY id
+  `;
+  return { ...order, lines: [...lines] };
 }
 
-const recomputeTotalTx = db.transaction((orderId: number): number => {
-  const row = db
-    .prepare("SELECT COALESCE(SUM(quantity * unit_price_cents), 0) AS total FROM order_lines WHERE order_id = ?")
-    .get(orderId) as { total: number };
-  db.prepare("UPDATE orders SET total_cents = ? WHERE id = ?").run(row.total, orderId);
-  return row.total;
-});
-
-export function recomputeTotal(orderId: number): number {
-  return recomputeTotalTx(orderId);
+export async function recomputeTotal(orderId: number): Promise<number> {
+  const [row] = await sql<[{ total: number }]>`
+    UPDATE orders
+       SET total_cents = COALESCE((
+         SELECT SUM(quantity * unit_price_cents) FROM order_lines WHERE order_id = ${orderId}
+       ), 0)
+     WHERE id = ${orderId}
+     RETURNING total_cents AS total
+  `;
+  return row?.total ?? 0;
 }
 
-export function submitOrder(orderId: number): { order_number: string; total_cents: number; eta_minutes: number; pickup_eta: string } {
-  const order = getOrder(orderId);
+export async function submitOrder(orderId: number): Promise<{
+  order_number: string;
+  total_cents: number;
+  eta_minutes: number;
+  pickup_eta: string;
+}> {
+  const order = await getOrder(orderId);
   if (!order) throw new HttpError(404, "order_not_found", `order ${orderId} not found`);
   if (order.status !== "open") throw new HttpError(409, "already_submitted", `order is ${order.status}`);
   if (order.lines.length === 0) throw new HttpError(409, "order_empty", "cannot submit empty order");
 
-  // Compute ETA: max prep_minutes across lines × 1 + small buffer
-  const items = db
-    .prepare(`SELECT id, prep_minutes FROM items WHERE id IN (${order.lines.map(() => "?").join(",")})`)
-    .all(...order.lines.map((l) => l.item_id)) as Array<{ id: number; prep_minutes: number }>;
-
+  // Fetch prep_minutes for every line's item
+  const itemIds = order.lines.map((l) => l.item_id);
+  const items = await sql<Array<{ id: number; prep_minutes: number }>>`
+    SELECT id, prep_minutes FROM items WHERE id = ANY(${itemIds})
+  `;
   const prepMap = new Map(items.map((i) => [i.id, i.prep_minutes]));
   const maxPrep = order.lines.reduce((m, l) => Math.max(m, prepMap.get(l.item_id) ?? 15), 0);
   const etaMin = maxPrep + 2; // 2-min kitchen-pickup buffer
-  const total = recomputeTotal(orderId);
-  const orderNumber = nextOrderNumber();
+
+  const total = await recomputeTotal(orderId);
+  const orderNumber = await nextOrderNumber();
   const pickupEta = new Date(Date.now() + etaMin * 60_000).toISOString();
 
-  db.prepare(
-    `UPDATE orders
-     SET status='submitted', order_number=?, submitted_at=datetime('now'), pickup_eta=?
-     WHERE id=?`,
-  ).run(orderNumber, pickupEta, orderId);
+  await sql`
+    UPDATE orders
+       SET status = 'submitted',
+           order_number = ${orderNumber},
+           submitted_at = NOW(),
+           pickup_eta = ${pickupEta}
+     WHERE id = ${orderId}
+  `;
 
   return { order_number: orderNumber, total_cents: total, eta_minutes: etaMin, pickup_eta: pickupEta };
 }

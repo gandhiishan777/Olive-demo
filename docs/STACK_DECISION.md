@@ -18,7 +18,7 @@
 | Telephony Stage 2 | Twilio number → ElevenLabs Conversational AI native integration | Config change, not refactor |
 | Tunneling | **ngrok** (paid `--domain` recommended for stable webhooks) | Mature, well-known, 1 command |
 | Noise suppression | Rely on ElevenLabs Conversational AI built-in + Deepgram Nova-3 noise robustness in fallback path | Krisp VIVA can be added in pipeline only on LiveKit path |
-| Backend | **TypeScript + Hono + SQLite** (better-sqlite3) | Type-safe, fastest to ship, single file DB, Postgres migration trivial later |
+| Backend | **TypeScript + Hono + Supabase Postgres** (postgres.js direct connection) | Type-safe, hosted DB so the founders edit the real menu in Supabase Studio, in-process SSE bus stays |
 | Dashboard | **React + Vite + Tailwind + SSE** | Single command spin-up, no Next.js overhead |
 | Repo | pnpm workspaces | Lightweight monorepo |
 | One-command start | `make demo` (or `pnpm demo`) | Spec requirement |
@@ -50,6 +50,17 @@ This decision is reversible. The whole point of the API contract (next doc) is t
 - **Vapi** also strong but charges a ~$0.05/min platform fee on top of pass-through. ElevenLabs Conversational AI minutes are bundled into the ElevenLabs plan you already have. (cloudtalk, f22labs)
 
 ---
+
+## Update 2026-05-22: switched SQLite → Supabase Postgres
+
+We loaded the real Paradise Biryani menu into a Supabase Postgres instance earlier than expected, so the backend now talks to Supabase directly via `postgres.js` (session pooler URL). Reasons this is the right call:
+
+- The founders can edit menu rows in **Supabase Studio** (their hosted SQL editor) without needing the backend running — useful for last-minute menu fixes before the demo.
+- The dashboard's 86 toggle still works through our REST API, and our in-process SSE bus still pushes live events to the dashboard. **Realtime is intentionally not wired** because the backend is the only writer; SSE is lower-latency.
+- API contract didn't change. Only the DB layer did. All 9 agent tools, all SSE event types, all error codes are unchanged.
+- See [`backend/migrations/`](../backend/migrations/) for the migration files. `002` adds the columns the contract needs; `003` is a template to populate them on existing rows.
+
+Tradeoff: backend now requires network connectivity to Supabase. If Ryan's WiFi flakes during the demo, the agent can't take orders — vs. SQLite where everything was local. Documented in [INCIDENT_RUNBOOK.md](INCIDENT_RUNBOOK.md).
 
 ## Cost guardrails
 

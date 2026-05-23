@@ -8,7 +8,7 @@ const EnvSchema = z.object({
 
   OLIVE_AGENT_TOKEN: z.string().min(16, "OLIVE_AGENT_TOKEN must be at least 16 chars").optional(),
 
-  DATABASE_URL: z.string().default("file:./data/olive.db"),
+  SUPABASE_DB_URL: z.string().url().optional(),
 
   RESTAURANT_NAME: z.string().default("Paradise Biryani"),
   RESTAURANT_TIMEZONE: z.string().default("America/Los_Angeles"),
@@ -29,8 +29,6 @@ const EnvSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   DEEPGRAM_API_KEY: z.string().optional(),
-
-  SEED_FILE: z.string().default("../seed/placeholder_menu.json"),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -46,6 +44,10 @@ function loadEnv(): Env {
   }
   if (parsed.data.NODE_ENV === "production" && !parsed.data.OLIVE_AGENT_TOKEN) {
     console.error("❌ OLIVE_AGENT_TOKEN required in production");
+    process.exit(1);
+  }
+  if (parsed.data.NODE_ENV !== "test" && !parsed.data.SUPABASE_DB_URL) {
+    console.error("❌ SUPABASE_DB_URL required (Supabase → Project Settings → Database → Connection string → Session pooler)");
     process.exit(1);
   }
   return parsed.data;

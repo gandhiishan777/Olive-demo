@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";
 import { env } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
+import { pingDb, closeDb } from "./db/index.js";
 import { healthRouter } from "./routes/health.js";
 import { menuRouter } from "./routes/menu.js";
 import { ordersRouter } from "./routes/orders.js";
@@ -35,9 +36,30 @@ app.route("/", callsRouter);
 app.route("/", streamRouter);
 
 const port = env.PORT;
-serve({ fetch: app.fetch, port }, (info) => {
-  logger.info({ port: info.port, env: env.NODE_ENV }, "Olive backend listening");
-  logger.info(`→ http://localhost:${info.port}/healthz`);
-});
+
+async function start() {
+  const dbOk = await pingDb();
+  if (!dbOk) {
+    logger.error("Could not connect to Supabase Postgres. Check SUPABASE_DB_URL.");
+    process.exit(1);
+  }
+  serve({ fetch: app.fetch, port }, (info) => {
+    logger.info({ port: info.port, env: env.NODE_ENV }, "Olive backend listening");
+    logger.info(`→ http://localhost:${info.port}/healthz`);
+  });
+}
+
+// Graceful shutdown
+for (const sig of ["SIGINT", "SIGTERM"] as const) {
+  process.on(sig, async () => {
+    logger.info({ sig }, "shutting down");
+    await closeDb();
+    process.exit(0);
+  });
+}
+
+if (process.env.NODE_ENV !== "test") {
+  start();
+}
 
 export { app };

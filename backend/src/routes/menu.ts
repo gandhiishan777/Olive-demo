@@ -1,57 +1,67 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { db } from "../db/index.js";
-import { hydrateItem, type DbItem } from "../lib/order.js";
+import { sql } from "../db/index.js";
+import type { Item } from "../lib/order.js";
 import { fuzzyScore } from "../lib/fuzzy.js";
 import { bus } from "../lib/events.js";
 import { requireToken } from "../middleware/auth.js";
 
 export const menuRouter = new Hono();
 
-menuRouter.get("/menu", (c) => {
-  const rows = db.prepare("SELECT * FROM items WHERE in_stock = 1 ORDER BY category, id").all() as DbItem[];
-  const items = rows.map((r) => {
-    const item = hydrateItem(r);
-    return {
-      id: item.id,
-      name: item.name,
-      price_cents: item.price_cents,
-      category: item.category,
-      spice_levels: item.spice_levels,
-      is_vegetarian: item.is_vegetarian,
-      short_desc: item.description.split(/[.!]\s/)[0]?.slice(0, 80) ?? "",
-    };
-  });
-  return c.json({ items, generated_at: new Date().toISOString() });
+// Compact menu — in-stock items only, token-efficient for the agent.
+menuRouter.get("/menu", async (c) => {
+  const items = await sql<Item[]>`
+    SELECT id, name, description, price_cents, category, spice_levels, is_vegetarian
+    FROM items
+    WHERE in_stock = true
+    ORDER BY category, id
+  `;
+  const compact = items.map((i) => ({
+    id: i.id,
+    name: i.name,
+    price_cents: i.price_cents,
+    category: i.category,
+    spice_levels: i.spice_levels,
+    is_vegetarian: i.is_vegetarian,
+    short_desc: (i.description ?? "").split(/[.!]\s/)[0]?.slice(0, 80) ?? "",
+  }));
+  return c.json({ items: compact, generated_at: new Date().toISOString() });
 });
 
-// List all items (in-stock + out). Used by the dashboard menu/86 panel.
-// Public read: same posture as /menu. Stock changes still require token.
-menuRouter.get("/items", (c) => {
-  const rows = db.prepare("SELECT * FROM items ORDER BY category, name").all() as DbItem[];
-  return c.json({ items: rows.map(hydrateItem) });
+// All items including out-of-stock — dashboard menu panel
+menuRouter.get("/items", async (c) => {
+  const items = await sql<Item[]>`
+    SELECT id, name, description, price_cents, in_stock, allergens, spice_levels,
+           prep_minutes, category, ingredients, is_vegetarian, is_vegan, is_gluten_free
+    FROM items
+    ORDER BY category, name
+  `;
+  return c.json({ items: [...items] });
 });
 
-menuRouter.get("/items/:id", (c) => {
+menuRouter.get("/items/:id", async (c) => {
   const id = Number(c.req.param("id"));
   if (!Number.isFinite(id)) return c.json({ error: { code: "bad_id", message: "invalid id" } }, 400);
-  const row = db.prepare("SELECT * FROM items WHERE id = ?").get(id) as DbItem | undefined;
-  if (!row) return c.json({ error: { code: "not_found", message: "item not found" } }, 404);
-  return c.json(hydrateItem(row));
+  const [item] = await sql<Item[]>`
+    SELECT id, name, description, price_cents, in_stock, allergens, spice_levels,
+           prep_minutes, category, ingredients, is_vegetarian, is_vegan, is_gluten_free
+    FROM items WHERE id = ${id}
+  `;
+  if (!item) return c.json({ error: { code: "not_found", message: "item not found" } }, 404);
+  return c.json(item);
 });
 
 menuRouter.get(
   "/menu/search",
   zValidator("query", z.object({ q: z.string().min(1) })),
-  (c) => {
+  async (c) => {
     const { q } = c.req.valid("query");
-    const rows = db.prepare("SELECT * FROM items WHERE in_stock = 1").all() as DbItem[];
-    const matches = rows
-      .map((r) => {
-        const item = hydrateItem(r);
-        return { id: item.id, name: item.name, in_stock: item.in_stock, score: fuzzyScore(q, item) };
-      })
+    const items = await sql<Array<Pick<Item, "id" | "name" | "description" | "in_stock">>>`
+      SELECT id, name, description, in_stock FROM items WHERE in_stock = true
+    `;
+    const matches = items
+      .map((i) => ({ id: i.id, name: i.name, in_stock: i.in_stock, score: fuzzyScore(q, i) }))
       .filter((m) => m.score >= 0.4)
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
@@ -63,16 +73,17 @@ menuRouter.patch(
   "/items/:id/stock",
   requireToken,
   zValidator("json", z.object({ in_stock: z.boolean() })),
-  (c) => {
+  async (c) => {
     const id = Number(c.req.param("id"));
     if (!Number.isFinite(id)) return c.json({ error: { code: "bad_id", message: "invalid id" } }, 400);
     const { in_stock } = c.req.valid("json");
-    const result = db
-      .prepare("UPDATE items SET in_stock = ?, updated_at = datetime('now') WHERE id = ?")
-      .run(in_stock ? 1 : 0, id);
-    if (result.changes === 0) return c.json({ error: { code: "not_found", message: "item not found" } }, 404);
-    const row = db.prepare("SELECT * FROM items WHERE id = ?").get(id) as DbItem;
+    const rows = await sql<Item[]>`
+      UPDATE items SET in_stock = ${in_stock}, updated_at = now() WHERE id = ${id}
+      RETURNING id, name, description, price_cents, in_stock, allergens, spice_levels,
+                prep_minutes, category, ingredients, is_vegetarian, is_vegan, is_gluten_free
+    `;
+    if (rows.length === 0) return c.json({ error: { code: "not_found", message: "item not found" } }, 404);
     bus.emitEvent({ type: "menu_update", data: { item_id: id, in_stock } });
-    return c.json(hydrateItem(row));
+    return c.json(rows[0]);
   },
 );

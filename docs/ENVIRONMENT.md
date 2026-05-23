@@ -20,7 +20,7 @@ Every variable in `.env.example`, what it does, and what happens if it's wrong.
 
 | Var | Default | Required | What it does |
 |---|---|---|---|
-| `DATABASE_URL` | `file:./data/olive.db` | no | SQLite file path. For Postgres later, switch to `postgres://...`. |
+| `SUPABASE_DB_URL` | — | **YES** (non-test) | Supabase Postgres connection string. Get from Supabase dashboard → Project Settings → Database → Connection string → **Session pooler** (port 5432). Format: `postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`. The backend uses prepared statements when on the session pooler; on the transaction pooler (port 6543) they're auto-disabled. |
 
 ## Restaurant identity
 

@@ -13,6 +13,26 @@
 
 ---
 
+## Scenario 0 — Supabase unreachable
+
+**Symptom:** Backend logs `connect ETIMEDOUT` / `ENOTFOUND` to `*.supabase.com`. `curl /healthz` → `503`. Agent gets 5xx on every tool call.
+
+**Say to owner:**
+> "Apologies, we're seeing a quick database hiccup. Give me one second."
+
+**Do silently:**
+1. Check WiFi/internet (any other site loading?).
+2. `curl -s https://supabase.com >/dev/null && echo ok || echo down` — quick reachability.
+3. Open https://status.supabase.com — confirm it's not Supabase's outage.
+4. **If your network is the problem:** switch to phone hotspot. Restart `pnpm backend`.
+5. **If Supabase is actually down (rare):** there's no fix. Pivot — "While that comes back, let me walk you through the architecture / show you the dashboard view." Demo turns into a walkthrough; reschedule the live call.
+
+**Prevention:** `make smoke` at T-5 minutes catches this before the owner dials.
+
+**Recovery time:** 15s if it's network. 5+ minutes if it's Supabase (basically: postpone).
+
+---
+
 ## Scenario 1 — Backend crashed
 
 **Symptom:** Agent says "let me get a team member" / tool calls return 5xx / dashboard "Live Orders" stops updating.

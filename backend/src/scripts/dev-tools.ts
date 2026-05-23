@@ -1,26 +1,38 @@
-import { db } from "../db/index.js";
+import { sql, closeDb } from "../db/index.js";
 import { logger } from "../lib/logger.js";
 
 const cmd = process.argv[2];
 
-function listOrders() {
-  const rows = db.prepare("SELECT id, status, order_number, customer_phone, total_cents, created_at FROM orders ORDER BY created_at DESC LIMIT 50").all();
-  console.table(rows);
+async function listOrders() {
+  const rows = await sql`
+    SELECT id, status, order_number, customer_phone, total_cents, created_at
+    FROM orders ORDER BY created_at DESC LIMIT 50
+  `;
+  console.table([...rows]);
 }
 
-function clearTestOrders() {
-  const result = db.exec("DELETE FROM order_lines; DELETE FROM orders;");
+async function clearTestOrders() {
+  await sql`DELETE FROM order_lines`;
+  await sql`DELETE FROM orders`;
   logger.info("test orders cleared");
 }
 
-function help() {
+async function help() {
   console.log("dev-tools commands:");
   console.log("  list-orders         — show last 50 orders");
   console.log("  clear-test-orders   — wipe all orders + lines (KEEPS menu)");
 }
 
-switch (cmd) {
-  case "list-orders": listOrders(); break;
-  case "clear-test-orders": clearTestOrders(); break;
-  default: help();
+async function main() {
+  try {
+    switch (cmd) {
+      case "list-orders": await listOrders(); break;
+      case "clear-test-orders": await clearTestOrders(); break;
+      default: await help();
+    }
+  } finally {
+    await closeDb();
+  }
 }
+
+main();

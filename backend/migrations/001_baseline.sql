@@ -1,0 +1,37 @@
+-- ============================================================================
+-- Migration 001 — BASELINE (informational; describes what we expect to exist)
+-- ============================================================================
+--
+-- This file documents the pre-existing Supabase schema that Ryan loaded with
+-- the real Paradise Biryani menu. We do NOT run this — it's already there.
+-- The columns listed here are what the schema diagram showed on 2026-05-22.
+--
+-- Tables: items, orders, order_lines
+-- Migration 002 adds the additional columns required by docs/API_CONTRACT.md.
+-- ============================================================================
+
+-- items (already exists)
+--   id            int4 PK
+--   name          text
+--   description   text (nullable)
+--   price_cents   int4
+--   in_stock      bool
+--   allergens     text[]
+--
+-- orders (already exists)
+--   id              int4 PK
+--   status          text
+--   customer_name   text (nullable)
+--   conversation_id text (nullable)
+--   total_cents     int4
+--   created_at      timestamptz
+--   submitted_at    timestamptz (nullable)
+--
+-- order_lines (already exists)
+--   id                int4 PK
+--   order_id          int4 FK -> orders(id)
+--   item_id           int4 FK -> items(id)
+--   item_name         text
+--   quantity          int4
+--   unit_price_cents  int4
+--   notes             text (nullable)
