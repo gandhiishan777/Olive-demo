@@ -5,11 +5,10 @@ import { sql } from "../db/index.js";
 import type { Item } from "../lib/order.js";
 import { fuzzyScore } from "../lib/fuzzy.js";
 import { bus } from "../lib/events.js";
-import { requireToken } from "../middleware/auth.js";
 
 export const menuRouter = new Hono();
 
-// Compact menu — in-stock items only, token-efficient for the agent.
+// Compact menu — in-stock only. Used by the agent.
 menuRouter.get("/menu", async (c) => {
   const items = await sql<Item[]>`
     SELECT id, name, description, price_cents, category, spice_levels, is_vegetarian
@@ -29,7 +28,7 @@ menuRouter.get("/menu", async (c) => {
   return c.json({ items: compact, generated_at: new Date().toISOString() });
 });
 
-// All items including out-of-stock — dashboard menu panel
+// All items (incl. out-of-stock) — used by dashboard menu/86 panel.
 menuRouter.get("/items", async (c) => {
   const items = await sql<Item[]>`
     SELECT id, name, description, price_cents, in_stock, allergens, spice_levels,
@@ -71,7 +70,6 @@ menuRouter.get(
 
 menuRouter.patch(
   "/items/:id/stock",
-  requireToken,
   zValidator("json", z.object({ in_stock: z.boolean() })),
   async (c) => {
     const id = Number(c.req.param("id"));

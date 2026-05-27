@@ -1,319 +1,100 @@
 # API Contract — Olive V0
 
-**Owner:** Backend subagent owns this file. All other subagents code against it.
 **Base URL (local):** `http://localhost:8787`
-**Base URL (tunneled):** `https://<ngrok-subdomain>.ngrok.app`
-**Auth:** None for V0 (single-restaurant local demo). All write endpoints require header `X-Olive-Token: <env OLIVE_AGENT_TOKEN>` to prevent random internet traffic from creating orders once the ngrok URL is public.
+**Base URL (tunneled):** your ngrok URL
+**Auth:** none. The backend trusts the tunnel.
 
----
-
-## Conventions
-
-- All requests/responses are JSON unless noted.
-- All money is `*_cents` integers. Never floats.
-- All timestamps are ISO-8601 UTC (`2026-05-22T19:30:00Z`).
-- All IDs are integers (SQLite `INTEGER PRIMARY KEY`).
-- Errors: `{ "error": { "code": "string", "message": "string" } }` with appropriate HTTP status.
-- Idempotency on order mutations: include `Idempotency-Key` header; backend dedupes on `(conversation_id, idempotency_key)` within 10 minutes.
+All money is `*_cents` integers. All timestamps are ISO-8601 UTC.
 
 ---
 
 ## Schemas
 
-### `Item`
 ```ts
-{
-  id: number,
-  name: string,
-  description: string,
-  price_cents: number,
-  in_stock: boolean,
-  allergens: string[],           // ['dairy','nuts','gluten','egg']
-  spice_levels: string[],        // ['mild','medium','hot','extra_hot']  (empty if not applicable)
-  prep_minutes: number,
-  category: 'biryani'|'curry'|'appetizer'|'bread'|'dessert'|'drink'|'side',
-  ingredients: string[],
-  is_vegetarian: boolean,
-  is_vegan: boolean,
-  is_gluten_free: boolean,
+Item {
+  id, name, description, price_cents, in_stock,
+  allergens: string[], spice_levels: string[],
+  prep_minutes, category, ingredients: string[],
+  is_vegetarian, is_vegan, is_gluten_free
 }
-```
 
-### `MenuCompact` (returned to agent — small, token-efficient)
-```ts
-{
-  items: Array<{
-    id: number,
-    name: string,
-    price_cents: number,
-    category: string,
-    spice_levels: string[],
-    is_vegetarian: boolean,
-    short_desc: string,            // first sentence of description, max 80 chars
-  }>,
-  generated_at: string,            // ISO timestamp; agent uses to detect staleness
+OrderLine {
+  id, item_id, item_name, quantity, unit_price_cents,
+  modifiers: object, notes
 }
-```
 
-### `Order`
-```ts
-{
-  id: number,
-  status: 'open'|'submitted'|'completed'|'cancelled',
-  customer_name: string|null,
-  customer_phone: string|null,
-  conversation_id: string|null,
-  total_cents: number,
-  lines: OrderLine[],
-  created_at: string,
-  submitted_at: string|null,
-  completed_at: string|null,
-  pickup_eta: string|null,
-  order_number: string|null,       // human-readable, e.g. "P-1042", assigned on submit
-}
-```
-
-### `OrderLine`
-```ts
-{
-  id: number,
-  item_id: number,
-  item_name: string,               // snapshot
-  quantity: number,
-  unit_price_cents: number,        // snapshot
-  modifiers: {
-    spice_level?: 'mild'|'medium'|'hot'|'extra_hot',
-    no_onions?: boolean,
-    no_garlic?: boolean,
-    extra?: string[],              // ['extra raita','extra naan']
-    [k: string]: unknown,
-  },
-  notes: string|null,
+Order {
+  id, status: 'open'|'submitted'|'completed'|'cancelled',
+  customer_name, customer_phone, conversation_id,
+  total_cents, order_number,
+  created_at, submitted_at, completed_at, pickup_eta,
+  lines: OrderLine[]
 }
 ```
 
 ---
 
-## Public dashboard / menu endpoints
+## Endpoints
 
-### `GET /menu`
-Returns `MenuCompact` for **in-stock items only**. Used by agent at conversation start and on any "what do you have?" question.
+### Menu
 
-**200**
-```json
-{ "items": [...], "generated_at": "2026-05-22T19:30:00Z" }
-```
-
-### `GET /items`
-Full list of all items including out-of-stock. Used by the dashboard menu-management panel. Public read.
-
-**200** `{ "items": Item[] }`
-
-### `GET /items/:id`
-Full `Item` (used by agent for ingredient / allergen / prep-time questions).
-
-**200** `Item` — **404** if not found.
-
-### `GET /menu/search?q=<text>`
-Fuzzy search by name + description. Used when customer says something close-but-not-exact ("biriyani", "tikka thing").
-
-**200**
-```json
-{
-  "matches": [
-    { "id": 1, "name": "Chicken Biryani", "score": 0.92, "in_stock": true },
-    ...
-  ]
-}
-```
-Returns top 5 matches, score ≥ 0.4. Empty array if nothing matches.
-
----
-
-## Stock management (dashboard → backend)
-
-### `PATCH /items/:id/stock`
-Body: `{ "in_stock": boolean }`
-**200** updated `Item`. Triggers SSE event on `/orders/stream` with `event: menu_update`.
-
----
-
-## Order taking (agent → backend)
-
-> All `POST/PATCH/DELETE` order endpoints require `X-Olive-Token` header.
-
-### `POST /orders`
-Create empty order at start of conversation.
-
-**Body:**
-```json
-{ "conversation_id": "el-conv-abc123", "customer_phone": "+14085551234" }
-```
-
-**201**
-```json
-{ "id": 7, "status": "open", "total_cents": 0, "order_number": null, "lines": [] }
-```
-
-### `POST /orders/:id/items`
-Add a line to an order.
-
-**Body:**
-```json
-{
-  "item_id": 3,
-  "quantity": 1,
-  "modifiers": { "spice_level": "medium", "no_onions": true },
-  "notes": null
-}
-```
-
-**Errors:**
-- `404 item_not_found`
-- `409 item_out_of_stock` — agent should apologize and offer alternatives
-- `400 invalid_modifier` — modifier not valid for this item (e.g. spice_level on a dessert)
-
-**201**
-```json
-{
-  "line_id": 21,
-  "item_name": "Chicken Biryani",
-  "unit_price_cents": 1699,
-  "running_total_cents": 1699
-}
-```
-
-### `PATCH /orders/:id/items/:line_id`
-Update quantity / modifiers / notes.
-
-**Body:** any subset of `{ quantity, modifiers, notes }`.
-**200**
-```json
-{ "line_id": 21, "running_total_cents": 3398 }
-```
-
-### `DELETE /orders/:id/items/:line_id`
-Remove a line. **200**
-```json
-{ "running_total_cents": 1699 }
-```
-
-### `GET /orders/:id`
-Current full `Order`. Agent calls this before read-back to be safe.
-
-### `POST /orders/:id/submit`
-Finalize. Computes ETA from max(prep_minutes of lines). Sets `submitted_at`, `order_number`, `pickup_eta`. Emits SSE `event: order_submitted`.
-
-**Body:**
-```json
-{ "customer_name": "Raj" }
-```
-
-**Errors:**
-- `409 order_empty` — no lines
-- `409 already_submitted`
-
-**200**
-```json
-{
-  "order_number": "P-1042",
-  "total_cents": 4250,
-  "eta_minutes": 22,
-  "pickup_eta": "2026-05-22T19:52:00Z"
-}
-```
-
-### `POST /orders/:id/cancel`
-Customer changed their mind entirely. **200** `{ "status": "cancelled" }`.
-
----
-
-## Dashboard endpoints
-
-### `GET /orders?status=open|submitted|completed&limit=50`
-List orders.
-**200** `{ "orders": Order[] }` ordered by `created_at DESC`.
-
-### `PATCH /orders/:id/complete`
-Mark order kitchen-done. **200** updated `Order`. Emits SSE `event: order_completed`.
-
-### `GET /orders/stream` (SSE)
-Server-Sent Events stream. **Content-Type:** `text/event-stream`.
-
-Events emitted:
-- `order_created` — `Order`
-- `order_updated` — `Order` (line add / remove / modify)
-- `order_submitted` — `Order`
-- `order_completed` — `Order`
-- `menu_update` — `{ item_id, in_stock }`
-- `ping` — `{}` every 25s for connection keepalive
-
-Format:
-```
-event: order_submitted
-data: { "id": 7, "order_number": "P-1042", ... }
-
-```
-
----
-
-## Call lifecycle hooks (telephony → backend)
-
-### `POST /calls/started`
-ElevenLabs webhook on call start. Used for analytics + rate limiting.
-**Body:**
-```json
-{ "conversation_id": "el-conv-abc123", "from_number": "+14085551234", "started_at": "..." }
-```
-**200** `{ "allow": true }` — or `{ "allow": false, "reason": "rate_limit" }` if caller exceeded 5 calls/hour.
-
-### `POST /calls/ended`
-**Body:** `{ "conversation_id": "...", "duration_seconds": 312, "ended_reason": "customer_hangup" }`
-**200** `{}` — used to close any still-open order from this conversation, log cost.
-
-### `POST /calls/transcript_chunk`
-Optional, for live transcript on dashboard. ElevenLabs sends partial transcripts.
-**Body:** `{ "conversation_id": "...", "role": "agent"|"user", "text": "...", "timestamp": "..." }`
-**200** `{}` — fans out as SSE `transcript_chunk` event.
-
----
-
-## Agent tool mapping (ElevenLabs `tools.json` shape)
-
-The agent has **exactly these 9 tools**:
-
-| Tool name | Maps to | When called |
+| Method | Path | Purpose |
 |---|---|---|
-| `get_menu` | `GET /menu` | At conversation start, automatically |
-| `get_item_details` | `GET /items/:id` | When customer asks ingredients/allergens/spice |
-| `search_menu` | `GET /menu/search?q=...` | When customer says something approximate |
-| `create_order` | `POST /orders` | First time a customer wants to order anything |
-| `add_item` | `POST /orders/:id/items` | Each item the customer asks for |
-| `update_item` | `PATCH /orders/:id/items/:line_id` | "Make that medium spice" / "change to two" |
-| `remove_item` | `DELETE /orders/:id/items/:line_id` | "Actually skip the naan" |
-| `get_order` | `GET /orders/:id` | Before read-back |
-| `submit_order` | `POST /orders/:id/submit` | After customer confirms read-back |
+| GET | `/menu` | Compact, in-stock items only (agent) |
+| GET | `/items` | Full list incl. out-of-stock (dashboard) |
+| GET | `/items/:id` | Full item detail |
+| GET | `/menu/search?q=` | Fuzzy match, top 5 |
+| PATCH | `/items/:id/stock` | `{in_stock: bool}` — emits SSE `menu_update` |
 
-The full JSON schema for each tool lives in `agent/tools.json` (built in Phase 1).
+### Orders
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/orders` | `{conversation_id, customer_phone?}` — reuses open order for same conversation |
+| GET | `/orders/:id` | Full order |
+| GET | `/orders?status=&limit=` | List for dashboard |
+| POST | `/orders/:id/items` | `{item_id, quantity?, modifiers?, notes?}` |
+| PATCH | `/orders/:id/items/:line_id` | Partial update |
+| DELETE | `/orders/:id/items/:line_id` | Remove line |
+| POST | `/orders/:id/submit` | `{customer_name}` → `{order_number, total_cents, eta_minutes, pickup_eta}` |
+| POST | `/orders/:id/cancel` | Soft cancel |
+| PATCH | `/orders/:id/complete` | Kitchen done |
+
+### Misc
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/healthz` | Liveness |
+| GET | `/orders/stream` | SSE: `order_created`, `order_updated`, `order_submitted`, `order_completed`, `menu_update`, `ping` (every 25s) |
 
 ---
 
-## Health / ops
+## Agent tool mapping (10 tools in `agent/tools.json`)
 
-### `GET /healthz`
-**200** `{ "ok": true, "db": true, "version": "0.1.0" }`
-
-### `GET /metrics` (optional, internal)
-Prometheus-style metrics: call count, order count, error rate, p50/p95 endpoint latency.
+| Tool | Endpoint |
+|---|---|
+| `get_menu` | GET /menu |
+| `get_item_details` | GET /items/:id |
+| `search_menu` | GET /menu/search?q= |
+| `create_order` | POST /orders |
+| `add_item` | POST /orders/:id/items |
+| `update_item` | PATCH /orders/:id/items/:line_id |
+| `remove_item` | DELETE /orders/:id/items/:line_id |
+| `get_order` | GET /orders/:id |
+| `submit_order` | POST /orders/:id/submit |
+| `cancel_order` | POST /orders/:id/cancel |
 
 ---
 
-## Out of scope for V0 (explicitly)
+## Error codes
 
-- Multi-restaurant / tenancy
-- Auth beyond `X-Olive-Token`
-- Payment
-- Delivery
-- SMS confirmation
-- Real Toast POS integration (this clone IS the integration)
-- User accounts
+| Code | When |
+|---|---|
+| `item_not_found` | GET /items/:id misses |
+| `item_out_of_stock` | add_item to a 86'd item |
+| `invalid_modifier` | modifier value not allowed for that item |
+| `order_locked` | add/update/remove on non-open order |
+| `already_submitted` | submit twice / submit a non-open order |
+| `order_empty` | submit without lines |
+| `cannot_cancel` | cancel a non-open order |
+| `cannot_complete` | complete a non-submitted order |

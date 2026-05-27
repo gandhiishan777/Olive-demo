@@ -9,7 +9,6 @@ type Filter = "submitted" | "completed" | "all";
 export function OrdersPanel({ pulseIds }: { pulseIds: Set<number> }) {
   const [filter, setFilter] = useState<Filter>("submitted");
   const qc = useQueryClient();
-  const token = localStorage.getItem("olive.token") ?? undefined;
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["orders", filter],
@@ -18,12 +17,10 @@ export function OrdersPanel({ pulseIds }: { pulseIds: Set<number> }) {
   });
 
   const completeMut = useMutation({
-    mutationFn: (id: number) => api.markComplete(id, token),
+    mutationFn: (id: number) => api.markComplete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
   });
 
-  // When ANY order event arrives — OR the SSE reconnects after a drop —
-  // invalidate the order queries to resync state.
   useEffect(() => {
     const handler = () => qc.invalidateQueries({ queryKey: ["orders"] });
     window.addEventListener("olive:order-event", handler);

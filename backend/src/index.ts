@@ -1,27 +1,21 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger as honoLogger } from "hono/logger";
 import { env } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
 import { pingDb, closeDb } from "./db/index.js";
 import { healthRouter } from "./routes/health.js";
 import { menuRouter } from "./routes/menu.js";
 import { ordersRouter } from "./routes/orders.js";
-import { callsRouter } from "./routes/calls.js";
 import { streamRouter } from "./routes/stream.js";
-import { requestId } from "./middleware/request-id.js";
 
 const app = new Hono();
 
 app.use("*", cors({
-  origin: (origin) => origin ?? "*",
+  origin: "*",
   allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-  allowHeaders: ["Content-Type", "X-Olive-Token", "Idempotency-Key"],
-  credentials: false,
+  allowHeaders: ["Content-Type"],
 }));
-
-app.use("*", requestId);
 
 app.onError((err, c) => {
   logger.error({ err: err.message, stack: err.stack }, "unhandled error");
@@ -33,10 +27,7 @@ app.notFound((c) => c.json({ error: { code: "not_found", message: "no such route
 app.route("/", healthRouter);
 app.route("/", menuRouter);
 app.route("/", ordersRouter);
-app.route("/", callsRouter);
 app.route("/", streamRouter);
-
-const port = env.PORT;
 
 async function start() {
   const dbOk = await pingDb();
@@ -44,13 +35,12 @@ async function start() {
     logger.error("Could not connect to Supabase Postgres. Check SUPABASE_DB_URL.");
     process.exit(1);
   }
-  serve({ fetch: app.fetch, port }, (info) => {
-    logger.info({ port: info.port, env: env.NODE_ENV }, "Olive backend listening");
+  serve({ fetch: app.fetch, port: env.PORT }, (info) => {
+    logger.info({ port: info.port }, "Olive backend listening");
     logger.info(`→ http://localhost:${info.port}/healthz`);
   });
 }
 
-// Graceful shutdown
 for (const sig of ["SIGINT", "SIGTERM"] as const) {
   process.on(sig, async () => {
     logger.info({ sig }, "shutting down");

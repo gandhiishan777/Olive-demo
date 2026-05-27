@@ -50,20 +50,6 @@ ALTER TABLE order_lines
 
 CREATE INDEX IF NOT EXISTS idx_order_lines_order ON order_lines(order_id);
 
--- ----- calls (new table — not in baseline) ----------------------------------
-CREATE TABLE IF NOT EXISTS calls (
-  conversation_id    text PRIMARY KEY,
-  from_number        text,
-  started_at         timestamptz NOT NULL DEFAULT now(),
-  ended_at           timestamptz,
-  duration_seconds   integer,
-  ended_reason       text,
-  estimated_cost_usd numeric(8,4) NOT NULL DEFAULT 0
-);
-
-CREATE INDEX IF NOT EXISTS idx_calls_from_number ON calls(from_number);
-CREATE INDEX IF NOT EXISTS idx_calls_started ON calls(started_at);
-
 -- ----- Order-number sequence ------------------------------------------------
 -- Starts at 1042 so the first issued order_number is P-1042 (matches our test fixtures).
 CREATE SEQUENCE IF NOT EXISTS order_number_seq START WITH 1042;

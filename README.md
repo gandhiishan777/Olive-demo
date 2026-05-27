@@ -1,87 +1,67 @@
-# Olive V0 — Voice agent demo
+# Olive V0
 
-AI voice agent that takes phone orders for independent restaurants. Paradise Biryani pilot demo.
+AI voice agent for restaurant phone orders. Paradise Biryani pilot demo.
 
-## Quick start (Ryan-proof)
+## Quick start
 
 ```bash
-# 1. Install deps
+# 1. Deps
 pnpm install
 
-# 2. Fill in .env
+# 2. Env
 cp .env.example .env
-$EDITOR .env                # set SUPABASE_DB_URL, OLIVE_AGENT_TOKEN, ELEVENLABS_*, ANTHROPIC_API_KEY
+# Paste your Supabase session-pooler URL into SUPABASE_DB_URL
 
-# 3. Apply DB migrations (once, in Supabase SQL editor)
+# 3. DB migrations (Supabase SQL editor)
 # Paste backend/migrations/002_add_missing_columns.sql → Run
-# Copy + customize backend/migrations/003_populate_existing_rows.sql.template → Run
+# Copy 003_populate_existing_rows.sql.template → .sql, edit, paste → Run
+# (Optional, only if you previously had a 'calls' table) 004_drop_calls.sql
 
-# 4. Start everything (backend + dashboard + ngrok tunnel)
-make demo                   # requires tmux. Or run the 3 commands manually:
-                            #   pnpm backend
-                            #   pnpm dashboard
-                            #   make tunnel
+# 4. Start
+make demo                                  # backend + dashboard + ngrok via tmux
+# or 3 terminals:
+#   pnpm backend
+#   pnpm dashboard
+#   make tunnel
 
-# 5. Wire ElevenLabs agent (one-time setup)
-# Open agent/SETUP.md and follow the 5-step checklist.
+# 5. Wire ElevenLabs (one time)
+# Follow agent/SETUP.md
 
-# 6. Smoke-test the wiring:
-OLIVE_AGENT_TOKEN=<your-token> pnpm --filter @olive/backend smoke
-
-# 7. Dial 574-626-6385 and try ordering chicken biryani.
+# 6. Dial 574-626-6385 and order chicken biryani
 ```
 
-Dashboard at <http://localhost:5173>.
-Backend at <http://localhost:8787>.
+Dashboard: <http://localhost:5173> · Backend: <http://localhost:8787>
 
-## What's inside
+## Structure
 
 ```
-.
-├── backend/        Hono + SQLite REST API (the "Toast clone")
-├── dashboard/      React + Vite + Tailwind SPA
-├── agent/          ElevenLabs Conversational AI config (system_prompt, tools.json)
-├── seed/           Menu ingest pipeline (real menu lives in Supabase)
-├── backend/migrations/  SQL migrations to run in Supabase SQL editor
-├── tests/noise/    Noise-resilience test harness
-├── docs/           Stack decision, API contract, architecture, setup guides
-└── tasks/          Build plan + lessons
+backend/        Hono + postgres.js. REST + SSE. No auth.
+dashboard/      React + Vite + Tailwind. Live Orders + Menu/86 panels.
+agent/          ElevenLabs system prompt + 10 tools + setup guide.
+backend/migrations/  SQL to run in Supabase.
+docs/           API_CONTRACT.md, SETUP_DEMO.md.
 ```
 
 ## Key docs
 
-- [BUILD_SPEC.md](BUILD_SPEC.md) — original product brief
-- [docs/STACK_DECISION.md](docs/STACK_DECISION.md) — why we chose this stack
-- [docs/API_CONTRACT.md](docs/API_CONTRACT.md) — REST endpoints + agent tool mapping
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — system diagram
-- [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) — every env var explained
-- [agent/SETUP.md](agent/SETUP.md) — ElevenLabs agent one-time wiring
-- [tasks/todo.md](tasks/todo.md) — sprint plan + DoD
+- [docs/API_CONTRACT.md](docs/API_CONTRACT.md) — REST endpoints
+- [docs/SETUP_DEMO.md](docs/SETUP_DEMO.md) — demo-day runbook
+- [agent/SETUP.md](agent/SETUP.md) — ElevenLabs agent wiring
+- [backend/migrations/README.md](backend/migrations/README.md) — DB migrations
 
-## Telephony strategy
+## Telephony
 
-| Stage | Number | Purpose |
-|---|---|---|
-| 1 | ElevenLabs temp **574-626-6385** | Founder testing today |
-| 2 | Twilio number (TBD) | Demo with Paradise Biryani owner |
-
-ElevenLabs runs their temp number on top of Twilio. Swapping to your own Twilio number is a config change in the ElevenLabs agent dashboard — no backend changes. See [docs/TELEPHONY.md](docs/TELEPHONY.md).
-
-## Demo Day checklist
-
-See [tasks/todo.md](tasks/todo.md) "Definition of Done" — every box must be green before you call the owner.
-
-## Cost guardrails
-
-Live in `.env`:
-- 8-min call hard cap
-- 500 tokens/turn
-- 5 calls/hour/number
-- $25/day kill switch
+| Stage | Number |
+|---|---|
+| Now | ElevenLabs temp **574-626-6385** |
+| Later | Twilio number (config change in ElevenLabs — no code) |
 
 ## Troubleshooting
 
-- "Agent doesn't pick up" → check ngrok is running and `PUBLIC_BASE_URL` matches your tunnel URL.
-- "Tools fail with 401" → `OLIVE_AGENT_TOKEN` in `.env` must match the header in `agent/tools.json`.
-- "Dashboard shows nothing live" → check backend SSE stream: `curl http://localhost:8787/orders/stream`.
-- "ElevenLabs STT mishears menu items in noise" → see [docs/STACK_DECISION.md](docs/STACK_DECISION.md) "Plan B: LiveKit + Deepgram fallback".
+| Symptom | Fix |
+|---|---|
+| `SUPABASE_DB_URL required` | Set it in `.env` |
+| 500 on `/menu` | Migration 002 not applied yet |
+| Agent quotes prices/items that don't exist | Migration 003 not applied — items are missing `category`/`spice_levels`/`ingredients` |
+| Order in DB but not dashboard | Browser blocking SSE — check console; or backend isn't running |
+| Tools 404 from ElevenLabs | ngrok URL in tool config doesn't match your live tunnel |

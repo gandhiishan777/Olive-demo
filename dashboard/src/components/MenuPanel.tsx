@@ -7,7 +7,6 @@ import { money } from "../lib/format";
 export function MenuPanel() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
-  const token = localStorage.getItem("olive.token") ?? undefined;
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["all-items"],
@@ -16,11 +15,10 @@ export function MenuPanel() {
   });
 
   const toggle = useMutation({
-    mutationFn: ({ id, in_stock }: { id: number; in_stock: boolean }) => api.toggleStock(id, in_stock, token),
+    mutationFn: ({ id, in_stock }: { id: number; in_stock: boolean }) => api.toggleStock(id, in_stock),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["all-items"] }),
   });
 
-  // Refresh on menu_update OR a stream reconnect (catch up after ngrok flap).
   useEffect(() => {
     const handler = () => qc.invalidateQueries({ queryKey: ["all-items"] });
     window.addEventListener("olive:menu-update", handler);
@@ -38,7 +36,7 @@ export function MenuPanel() {
   }
 
   return (
-    <section className="flex flex-col h-full bg-cream-100 border-r border-cream-300">
+    <section className="flex flex-col h-full bg-cream-100">
       <div className="p-4 border-b border-cream-300 bg-cream-50">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-burgundy-800">Menu — 86 Toggle</h2>

@@ -9,28 +9,10 @@ import {
   HttpError,
   type Item,
   type Order,
-  type OrderLine,
 } from "../lib/order.js";
 import { bus } from "../lib/events.js";
-import { requireToken } from "../middleware/auth.js";
-import { getCached, setCached } from "../lib/idempotency.js";
-import { env } from "../lib/env.js";
-
-function localPickupTime(isoUtc: string): string {
-  // Format pickup ETA in the restaurant's timezone, e.g. "7:52 PM".
-  try {
-    return new Date(isoUtc).toLocaleTimeString("en-US", {
-      timeZone: env.RESTAURANT_TIMEZONE,
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  } catch {
-    return isoUtc;
-  }
-}
 
 export const ordersRouter = new Hono();
-ordersRouter.use("*", requireToken);
 
 const ModifiersSchema = z
   .object({
@@ -50,15 +32,8 @@ ordersRouter.post(
   })),
   async (c) => {
     const { conversation_id, customer_phone } = c.req.valid("json");
-    const idemKey = c.req.header("idempotency-key");
-    if (idemKey) {
-      const hit = getCached("orders:create", `${conversation_id}:${idemKey}`);
-      if (hit) return c.json(hit.body as object, hit.status as 200);
-    }
 
-    // Re-use existing OPEN order for the same conversation.
-    // Filtering by status='open' avoids soft-locking the agent on a cancelled/submitted order
-    // (e.g. when /calls/ended auto-cancels and the same conversation_id is somehow reused).
+    // Re-use existing OPEN order for the same conversation; otherwise create.
     const existingRows = await sql<Pick<Order, "id">[]>`
       SELECT id FROM orders
        WHERE conversation_id = ${conversation_id} AND status = 'open'
@@ -66,9 +41,7 @@ ordersRouter.post(
     `;
     if (existingRows[0]) {
       const order = (await getOrder(existingRows[0].id))!;
-      const body = { id: order.id, status: order.status, total_cents: order.total_cents, order_number: order.order_number, lines: order.lines };
-      if (idemKey) setCached("orders:create", `${conversation_id}:${idemKey}`, 200, body);
-      return c.json(body, 200);
+      return c.json({ id: order.id, status: order.status, total_cents: order.total_cents, order_number: order.order_number, lines: order.lines }, 200);
     }
 
     const [created] = await sql<[{ id: number }]>`
@@ -78,10 +51,8 @@ ordersRouter.post(
     `;
     const id = created!.id;
     const order = (await getOrder(id))!;
-    const body = { id, status: "open", total_cents: 0, order_number: null, lines: [] };
     bus.emitEvent({ type: "order_created", data: order });
-    if (idemKey) setCached("orders:create", `${conversation_id}:${idemKey}`, 201, body);
-    return c.json(body, 201);
+    return c.json({ id, status: "open", total_cents: 0, order_number: null, lines: [] }, 201);
   },
 );
 
@@ -121,12 +92,6 @@ ordersRouter.post(
     const orderId = Number(c.req.param("id"));
     if (!Number.isFinite(orderId)) return c.json({ error: { code: "bad_id", message: "invalid id" } }, 400);
     const { item_id, quantity, modifiers, notes } = c.req.valid("json");
-    const idemKey = c.req.header("idempotency-key");
-    const idemScope = `orders:${orderId}:add_item`;
-    if (idemKey) {
-      const hit = getCached(idemScope, idemKey);
-      if (hit) return c.json(hit.body as object, hit.status as 200);
-    }
 
     const [item] = await sql<Item[]>`
       SELECT id, name, price_cents, in_stock, spice_levels
@@ -135,15 +100,7 @@ ordersRouter.post(
     if (!item) return c.json({ error: { code: "item_not_found", message: "item not found" } }, 404);
     if (!item.in_stock) return c.json({ error: { code: "item_out_of_stock", message: `${item.name} is currently unavailable` } }, 409);
 
-    if (modifiers?.spice_level && item.spice_levels.length > 0 && !item.spice_levels.includes(modifiers.spice_level)) {
-      return c.json({ error: { code: "invalid_modifier", message: `spice_level ${modifiers.spice_level} not available for ${item.name}` } }, 400);
-    }
-    if (modifiers?.spice_level && item.spice_levels.length === 0) {
-      return c.json({ error: { code: "invalid_modifier", message: `${item.name} does not accept a spice level` } }, 400);
-    }
-
-    // Atomic: only INSERT if the order is still open. Closes the
-    // submit-vs-add_item race (line lands on a submitted order otherwise).
+    // Atomic: only INSERT if the order is still open.
     const inserted = await sql<Array<{ id: number }>>`
       INSERT INTO order_lines (order_id, item_id, item_name, quantity, unit_price_cents, modifiers, notes)
       SELECT ${orderId}, ${item.id}, ${item.name}, ${quantity}, ${item.price_cents}, ${sql.json((modifiers ?? {}) as never)}, ${notes ?? null}
@@ -152,22 +109,19 @@ ordersRouter.post(
     `;
     const line = inserted[0];
     if (!line) {
-      // Either the order doesn't exist OR it was just locked. Disambiguate.
       const [existing] = await sql<Pick<Order, "status">[]>`SELECT status FROM orders WHERE id = ${orderId}`;
       if (!existing) return c.json({ error: { code: "not_found", message: "order not found" } }, 404);
       return c.json({ error: { code: "order_locked", message: `order is ${existing.status}` } }, 409);
     }
-    const lineId = line.id;
+
     const total = await recomputeTotal(orderId);
     bus.emitEvent({ type: "order_updated", data: await getOrder(orderId) });
-    const body = {
-      line_id: lineId,
+    return c.json({
+      line_id: line.id,
       item_name: item.name,
       unit_price_cents: item.price_cents,
       running_total_cents: total,
-    };
-    if (idemKey) setCached(idemScope, idemKey, 201, body);
-    return c.json(body, 201);
+    }, 201);
   },
 );
 
@@ -185,22 +139,13 @@ ordersRouter.patch(
       return c.json({ error: { code: "bad_id", message: "invalid id" } }, 400);
     }
     const body = c.req.valid("json");
-    const [line] = await sql<OrderLine[]>`SELECT * FROM order_lines WHERE id = ${lineId} AND order_id = ${orderId}`;
-    if (!line) return c.json({ error: { code: "not_found", message: "line not found" } }, 404);
     const [orderRow] = await sql<Pick<Order, "status">[]>`SELECT status FROM orders WHERE id = ${orderId}`;
-    if (orderRow?.status !== "open") return c.json({ error: { code: "order_locked", message: `order is ${orderRow?.status}` } }, 409);
+    if (!orderRow) return c.json({ error: { code: "not_found", message: "order not found" } }, 404);
+    if (orderRow.status !== "open") return c.json({ error: { code: "order_locked", message: `order is ${orderRow.status}` } }, 409);
 
-    if (body.modifiers !== undefined && body.modifiers.spice_level) {
-      const [item] = await sql<Pick<Item, "name" | "spice_levels">[]>`SELECT name, spice_levels FROM items WHERE id = ${line.item_id}`;
-      if (item && item.spice_levels.length > 0 && !item.spice_levels.includes(body.modifiers.spice_level)) {
-        return c.json({ error: { code: "invalid_modifier", message: `spice_level not available for ${item.name}` } }, 400);
-      }
-    }
-
-    // Build dynamic UPDATE using postgres.js fragments
-    if (body.quantity !== undefined) await sql`UPDATE order_lines SET quantity = ${body.quantity} WHERE id = ${lineId}`;
-    if (body.modifiers !== undefined) await sql`UPDATE order_lines SET modifiers = ${sql.json(body.modifiers as never)} WHERE id = ${lineId}`;
-    if (body.notes !== undefined) await sql`UPDATE order_lines SET notes = ${body.notes} WHERE id = ${lineId}`;
+    if (body.quantity !== undefined) await sql`UPDATE order_lines SET quantity = ${body.quantity} WHERE id = ${lineId} AND order_id = ${orderId}`;
+    if (body.modifiers !== undefined) await sql`UPDATE order_lines SET modifiers = ${sql.json(body.modifiers as never)} WHERE id = ${lineId} AND order_id = ${orderId}`;
+    if (body.notes !== undefined) await sql`UPDATE order_lines SET notes = ${body.notes} WHERE id = ${lineId} AND order_id = ${orderId}`;
 
     const total = await recomputeTotal(orderId);
     bus.emitEvent({ type: "order_updated", data: await getOrder(orderId) });
@@ -214,11 +159,11 @@ ordersRouter.delete("/orders/:id/items/:line_id", async (c) => {
   if (!Number.isFinite(orderId) || !Number.isFinite(lineId)) {
     return c.json({ error: { code: "bad_id", message: "invalid id" } }, 400);
   }
-  const [orderRow] = await sql<Pick<Order, "status">[]>`SELECT status FROM orders WHERE id = ${orderId}`;
-  if (!orderRow) return c.json({ error: { code: "not_found", message: "order not found" } }, 404);
-  if (orderRow.status !== "open") return c.json({ error: { code: "order_locked", message: `order is ${orderRow.status}` } }, 409);
-  const deleted = await sql`DELETE FROM order_lines WHERE id = ${lineId} AND order_id = ${orderId} RETURNING id`;
-  if (deleted.count === 0) return c.json({ error: { code: "not_found", message: "line not found" } }, 404);
+  const [order] = await sql<Pick<Order, "status">[]>`SELECT status FROM orders WHERE id = ${orderId}`;
+  if (!order) return c.json({ error: { code: "not_found", message: "order not found" } }, 404);
+  if (order.status !== "open") return c.json({ error: { code: "order_locked", message: `order is ${order.status}` } }, 409);
+  const result = await sql`DELETE FROM order_lines WHERE id = ${lineId} AND order_id = ${orderId} RETURNING id`;
+  if (result.count === 0) return c.json({ error: { code: "not_found", message: "line not found" } }, 404);
   const total = await recomputeTotal(orderId);
   bus.emitEvent({ type: "order_updated", data: await getOrder(orderId) });
   return c.json({ running_total_cents: total });
@@ -231,12 +176,6 @@ ordersRouter.post(
     const orderId = Number(c.req.param("id"));
     if (!Number.isFinite(orderId)) return c.json({ error: { code: "bad_id", message: "invalid id" } }, 400);
     const { customer_name } = c.req.valid("json");
-    const idemKey = c.req.header("idempotency-key");
-    const idemScope = `orders:${orderId}:submit`;
-    if (idemKey) {
-      const hit = getCached(idemScope, idemKey);
-      if (hit) return c.json(hit.body as object, hit.status as 200);
-    }
     try {
       if (customer_name) {
         await sql`UPDATE orders SET customer_name = ${customer_name} WHERE id = ${orderId}`;
@@ -244,18 +183,10 @@ ordersRouter.post(
       const result = await submitOrder(orderId);
       const order = (await getOrder(orderId))!;
       bus.emitEvent({ type: "order_submitted", data: order });
-      const withLocalTime = { ...result, pickup_eta_local: localPickupTime(result.pickup_eta), timezone: env.RESTAURANT_TIMEZONE };
-      if (idemKey) setCached(idemScope, idemKey, 200, withLocalTime);
-      return c.json(withLocalTime);
+      return c.json(result);
     } catch (err) {
       if (err instanceof HttpError) {
         return c.json({ error: { code: err.code, message: err.message } }, err.status as 400);
-      }
-      // Postgres unique violation on order_number → translate to friendly 409
-      // so the agent can recover instead of escalating.
-      const pgErr = err as { code?: string } | undefined;
-      if (pgErr?.code === "23505") {
-        return c.json({ error: { code: "already_submitted", message: "order already submitted" } }, 409);
       }
       throw err;
     }
