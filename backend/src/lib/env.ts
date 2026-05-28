@@ -1,5 +1,13 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
+
+// Load .env from cwd first (when running from backend/), then fall back to the
+// repo root (so it works whether you run from backend/ or the project root).
+config();
+const here = path.dirname(fileURLToPath(import.meta.url));
+config({ path: path.resolve(here, "../../../.env") });
 
 const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(8787),
