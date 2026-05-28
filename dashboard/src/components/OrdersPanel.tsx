@@ -13,7 +13,7 @@ export function OrdersPanel({ pulseIds }: { pulseIds: Set<number> }) {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["orders", filter],
     queryFn: () => api.ordersByStatus(filter === "all" ? undefined : filter),
-    refetchInterval: 20_000,
+    refetchInterval: 5_000,
   });
 
   const completeMut = useMutation({

@@ -8,18 +8,19 @@ import { bus } from "../lib/events.js";
 
 export const menuRouter = new Hono();
 
-// Compact menu — in-stock only. Used by the agent.
+// Compact menu — ALL items (incl. out-of-stock) with in_stock flag. Used by the agent.
+// In-stock items come first so the agent leads with what it can sell.
 menuRouter.get("/menu", async (c) => {
   const items = await sql<Item[]>`
-    SELECT id, name, description, price_cents, category, spice_levels, is_vegetarian
+    SELECT id, name, description, price_cents, in_stock, category, spice_levels, is_vegetarian
     FROM items
-    WHERE in_stock = true
-    ORDER BY category, id
+    ORDER BY in_stock DESC, category, id
   `;
   const compact = items.map((i) => ({
     id: i.id,
     name: i.name,
     price_cents: i.price_cents,
+    in_stock: i.in_stock,
     category: i.category,
     spice_levels: i.spice_levels,
     is_vegetarian: i.is_vegetarian,
@@ -56,8 +57,10 @@ menuRouter.get(
   zValidator("query", z.object({ q: z.string().min(1) })),
   async (c) => {
     const { q } = c.req.valid("query");
+    // Search ALL items (incl. out-of-stock) so the agent can distinguish
+    // "we don't carry that" (0 matches) from "we're out today" (matches with in_stock=false).
     const items = await sql<Array<Pick<Item, "id" | "name" | "description" | "in_stock">>>`
-      SELECT id, name, description, in_stock FROM items WHERE in_stock = true
+      SELECT id, name, description, in_stock FROM items
     `;
     const matches = items
       .map((i) => ({ id: i.id, name: i.name, in_stock: i.in_stock, score: fuzzyScore(q, i) }))

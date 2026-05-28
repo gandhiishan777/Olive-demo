@@ -11,7 +11,7 @@ export function MenuPanel() {
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["all-items"],
     queryFn: api.allItems,
-    refetchInterval: 60_000,
+    refetchInterval: 15_000,
   });
 
   const toggle = useMutation({

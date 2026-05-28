@@ -115,7 +115,9 @@ ordersRouter.post(
     }
 
     const total = await recomputeTotal(orderId);
-    bus.emitEvent({ type: "order_updated", data: await getOrder(orderId) });
+    // Fire-and-forget: don't make the agent wait on a getOrder round-trip
+    // just so the dashboard can update. SSE fans out a tick after the response.
+    getOrder(orderId).then((o) => bus.emitEvent({ type: "order_updated", data: o })).catch(() => {});
     return c.json({
       line_id: line.id,
       item_name: item.name,
@@ -148,7 +150,9 @@ ordersRouter.patch(
     if (body.notes !== undefined) await sql`UPDATE order_lines SET notes = ${body.notes} WHERE id = ${lineId} AND order_id = ${orderId}`;
 
     const total = await recomputeTotal(orderId);
-    bus.emitEvent({ type: "order_updated", data: await getOrder(orderId) });
+    // Fire-and-forget: don't make the agent wait on a getOrder round-trip
+    // just so the dashboard can update. SSE fans out a tick after the response.
+    getOrder(orderId).then((o) => bus.emitEvent({ type: "order_updated", data: o })).catch(() => {});
     return c.json({ line_id: lineId, running_total_cents: total });
   },
 );
@@ -165,13 +169,13 @@ ordersRouter.delete("/orders/:id/items/:line_id", async (c) => {
   const result = await sql`DELETE FROM order_lines WHERE id = ${lineId} AND order_id = ${orderId} RETURNING id`;
   if (result.count === 0) return c.json({ error: { code: "not_found", message: "line not found" } }, 404);
   const total = await recomputeTotal(orderId);
-  bus.emitEvent({ type: "order_updated", data: await getOrder(orderId) });
+  getOrder(orderId).then((o) => bus.emitEvent({ type: "order_updated", data: o })).catch(() => {});
   return c.json({ running_total_cents: total });
 });
 
 ordersRouter.post(
   "/orders/:id/submit",
-  zValidator("json", z.object({ customer_name: z.string().min(1).max(80).optional() })),
+  zValidator("json", z.object({ customer_name: z.string().min(1).max(80) })),
   async (c) => {
     const orderId = Number(c.req.param("id"));
     if (!Number.isFinite(orderId)) return c.json({ error: { code: "bad_id", message: "invalid id" } }, 400);
@@ -198,7 +202,7 @@ ordersRouter.post("/orders/:id/cancel", async (c) => {
   if (!Number.isFinite(orderId)) return c.json({ error: { code: "bad_id", message: "invalid id" } }, 400);
   const result = await sql`UPDATE orders SET status = 'cancelled' WHERE id = ${orderId} AND status = 'open' RETURNING id`;
   if (result.count === 0) return c.json({ error: { code: "cannot_cancel", message: "order not open" } }, 409);
-  bus.emitEvent({ type: "order_updated", data: await getOrder(orderId) });
+  getOrder(orderId).then((o) => bus.emitEvent({ type: "order_updated", data: o })).catch(() => {});
   return c.json({ status: "cancelled" });
 });
 
