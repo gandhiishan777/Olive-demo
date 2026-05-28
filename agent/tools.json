@@ -88,7 +88,7 @@
         { "name": "order_id", "type": "integer", "required": true }
       ],
       "body_parameters": [
-        { "name": "customer_name", "type": "string", "required": true, "description": "Ask 'Can I get a name for the order?' before this call." }
+        { "name": "customer_name", "type": "string", "required": true, "description": "MUST be the actual first name the caller spoke on the call. ASK them explicitly: 'Can I get a first name for the order?' and use what they say. NEVER fabricate. Do NOT use placeholder values like 'John Doe', 'Test', 'Customer', 'Guest', 'Anonymous' — the backend will reject these with 400 placeholder_name. If you don't have a real name, ask before calling this tool." }
       ]
     },
     {

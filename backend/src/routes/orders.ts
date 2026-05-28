@@ -173,6 +173,16 @@ ordersRouter.delete("/orders/:id/items/:line_id", async (c) => {
   return c.json({ running_total_cents: total });
 });
 
+// Reject obvious placeholder names — Gemini Flash sometimes fabricates one
+// instead of asking the caller. Force the agent to retry.
+const PLACEHOLDER_NAMES = new Set([
+  "john doe", "jane doe", "john smith", "jane smith",
+  "test", "test test", "test customer", "test name",
+  "customer", "anonymous", "user", "guest",
+  "n/a", "na", "none", "unknown", "no name", "noname",
+  "first name last name",
+]);
+
 ordersRouter.post(
   "/orders/:id/submit",
   zValidator("json", z.object({ customer_name: z.string().min(1).max(80) })),
@@ -180,10 +190,17 @@ ordersRouter.post(
     const orderId = Number(c.req.param("id"));
     if (!Number.isFinite(orderId)) return c.json({ error: { code: "bad_id", message: "invalid id" } }, 400);
     const { customer_name } = c.req.valid("json");
+    const normalized = customer_name.trim().toLowerCase();
+    if (PLACEHOLDER_NAMES.has(normalized)) {
+      return c.json({
+        error: {
+          code: "placeholder_name",
+          message: "Customer name appears to be a placeholder. Ask the caller for their real first name and retry.",
+        },
+      }, 400);
+    }
     try {
-      if (customer_name) {
-        await sql`UPDATE orders SET customer_name = ${customer_name} WHERE id = ${orderId}`;
-      }
+      await sql`UPDATE orders SET customer_name = ${customer_name} WHERE id = ${orderId}`;
       const result = await submitOrder(orderId);
       const order = (await getOrder(orderId))!;
       bus.emitEvent({ type: "order_submitted", data: order });
