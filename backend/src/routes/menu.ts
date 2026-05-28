@@ -8,25 +8,20 @@ import { bus } from "../lib/events.js";
 
 export const menuRouter = new Hono();
 
-// Compact menu — ALL items (incl. out-of-stock) with in_stock flag. Used by the agent.
-// In-stock items come first so the agent leads with what it can sell.
+// FULL menu — every field the agent will ever need, including out-of-stock items.
+// Designed to be called ONCE at the start of a call (auto-call-on-start) so the
+// agent has all menu info in its context for the rest of the conversation.
+// No more get_item_details / search_menu round-trips required.
+// In-stock items come first.
 menuRouter.get("/menu", async (c) => {
   const items = await sql<Item[]>`
-    SELECT id, name, description, price_cents, in_stock, category, spice_levels, is_vegetarian
+    SELECT id, name, description, price_cents, in_stock,
+           allergens, spice_levels, prep_minutes, category, ingredients,
+           is_vegetarian, is_vegan, is_gluten_free
     FROM items
     ORDER BY in_stock DESC, category, id
   `;
-  const compact = items.map((i) => ({
-    id: i.id,
-    name: i.name,
-    price_cents: i.price_cents,
-    in_stock: i.in_stock,
-    category: i.category,
-    spice_levels: i.spice_levels,
-    is_vegetarian: i.is_vegetarian,
-    short_desc: (i.description ?? "").split(/[.!]\s/)[0]?.slice(0, 80) ?? "",
-  }));
-  return c.json({ items: compact, generated_at: new Date().toISOString() });
+  return c.json({ items: [...items], generated_at: new Date().toISOString() });
 });
 
 // All items (incl. out-of-stock) — used by dashboard menu/86 panel.

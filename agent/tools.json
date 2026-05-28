@@ -1,40 +1,21 @@
 {
-  "_comment": "ElevenLabs Conversational AI Server Tools for Olive. Replace ${BASE_URL} with your ngrok URL in the EL dashboard. No auth — backend trusts the tunnel.",
+  "_comment": "ElevenLabs Conversational AI Server Tools for Olive. Replace ${BASE_URL} with your ngrok URL in the EL dashboard. No auth.",
   "_placeholders": {
     "BASE_URL": "https://<your-ngrok-subdomain>.ngrok.app"
   },
   "_auto_call_on_start": ["get_menu"],
+  "_note_for_setup": "CRITICAL: in the ElevenLabs agent dashboard, enable 'auto-call on start' for get_menu. It fires once at conversation start (in parallel with the greeting) and the response stays in the agent's context for the entire call. No other menu tool calls are made — the agent answers ingredient / allergen / spice questions directly from the cached response. This is the latency win.",
   "tools": [
     {
       "name": "get_menu",
-      "description": "Fetch the current in-stock menu (compact: id, name, price, category, spice options, veg flag, short description). Call this ONCE at the very start of the call, AGAIN whenever the caller has paused more than ~60 seconds, AND any time you suspect the menu changed. This is your source of truth — never name a dish that isn't in the latest response.",
+      "description": "Fetches the COMPLETE menu (every item with description, price, ingredients, allergens, spice levels, dietary flags, prep time, and in_stock status). FIRES AUTOMATICALLY at the start of every call — you do NOT call it manually. The response stays in your context for the entire call. Use it to answer every menu / ingredient / allergen / spice question without making another tool call.",
       "method": "GET",
       "url": "${BASE_URL}/menu",
       "response_timeout_secs": 10
     },
     {
-      "name": "get_item_details",
-      "description": "Fetch full details for one item: description, ingredients, allergens, prep_minutes, all spice levels, dietary flags. Call when the caller asks about ingredients ('what's in the X?'), allergens ('does it have nuts?'), spice options, or prep time.",
-      "method": "GET",
-      "url": "${BASE_URL}/items/{id}",
-      "response_timeout_secs": 10,
-      "path_parameters": [
-        { "name": "id", "type": "integer", "required": true, "description": "Item id from get_menu or search_menu." }
-      ]
-    },
-    {
-      "name": "search_menu",
-      "description": "Fuzzy search the menu by name/description. Use when the caller says something close-but-not-exact ('biriyani', 'tikka thing'). Returns up to 5 ranked matches. If 0 matches: it's not on the menu — do NOT invent. If >1: ask which one.",
-      "method": "GET",
-      "url": "${BASE_URL}/menu/search",
-      "response_timeout_secs": 10,
-      "query_parameters": [
-        { "name": "q", "type": "string", "required": true, "description": "What the caller said." }
-      ]
-    },
-    {
       "name": "create_order",
-      "description": "Open a new empty order for this call. Call EXACTLY ONCE per call, the first time the caller wants to actually order something. Returns the order id — reuse for every later add_item / update_item / remove_item / get_order / submit_order.",
+      "description": "Open a new empty order for this call. Call EXACTLY ONCE per call, the first time the caller wants to actually order something. Returns the order id — reuse for every later add_item / remove_item / get_order / submit_order / cancel_order.",
       "method": "POST",
       "url": "${BASE_URL}/orders",
       "response_timeout_secs": 10,
@@ -60,7 +41,7 @@
     },
     {
       "name": "add_item",
-      "description": "Add ONE line to the order. Call for each distinct item. Gather modifiers (spice level, no_onions, no_garlic, extras) BEFORE calling. On 409 item_out_of_stock: apologize, offer alternative from latest menu. On 400 invalid_modifier: drop the bad modifier, ask for a valid one.",
+      "description": "Add ONE line to the order. Use the item id from the cached menu (the one loaded at call start). Gather modifiers (spice level, no_onions, no_garlic, extras) from the caller BEFORE calling. On 409 item_out_of_stock: apologize, offer an in-stock alternative from the cached menu in the same category. On 400 invalid_modifier: drop the bad modifier, ask for a valid one.",
       "method": "POST",
       "url": "${BASE_URL}/orders/{order_id}/items",
       "response_timeout_secs": 10,
@@ -69,43 +50,26 @@
         { "name": "order_id", "type": "integer", "required": true, "description": "From create_order." }
       ],
       "body_parameters": [
-        { "name": "item_id", "type": "integer", "required": true, "description": "From get_menu / search_menu." },
+        { "name": "item_id", "type": "integer", "required": true, "description": "From the cached menu loaded at call start." },
         { "name": "quantity", "type": "integer", "required": false, "description": "Defaults to 1." },
         { "name": "modifiers", "type": "object", "required": false, "description": "e.g. {\"spice_level\":\"medium\",\"no_onions\":true,\"extra\":[\"extra raita\"]}" },
         { "name": "notes", "type": "string", "required": false, "description": "Free-text per line." }
       ]
     },
     {
-      "name": "update_item",
-      "description": "Change quantity / modifiers / notes on an existing line. Use for 'make that medium spice' or 'change to two of those'.",
-      "method": "PATCH",
-      "url": "${BASE_URL}/orders/{order_id}/items/{line_id}",
-      "response_timeout_secs": 10,
-      "headers": { "Content-Type": "application/json" },
-      "path_parameters": [
-        { "name": "order_id", "type": "integer", "required": true },
-        { "name": "line_id", "type": "integer", "required": true, "description": "From add_item's response." }
-      ],
-      "body_parameters": [
-        { "name": "quantity", "type": "integer", "required": false },
-        { "name": "modifiers", "type": "object", "required": false },
-        { "name": "notes", "type": "string", "required": false }
-      ]
-    },
-    {
       "name": "remove_item",
-      "description": "Remove a line. Use for 'actually scratch the naan' or 'never mind the lassi'.",
+      "description": "Remove a line. Use for 'actually scratch the naan' or 'never mind the lassi'. For changing quantity or modifiers, use remove_item + add_item instead of a separate update tool.",
       "method": "DELETE",
       "url": "${BASE_URL}/orders/{order_id}/items/{line_id}",
       "response_timeout_secs": 10,
       "path_parameters": [
         { "name": "order_id", "type": "integer", "required": true },
-        { "name": "line_id", "type": "integer", "required": true }
+        { "name": "line_id", "type": "integer", "required": true, "description": "From add_item's response." }
       ]
     },
     {
       "name": "get_order",
-      "description": "Fetch the current full order state (all lines, total). Call this BEFORE every read-back to the caller so you read accurate state, not what you remember.",
+      "description": "SAFETY NET ONLY — do not call this routinely. Read back the order from your conversation memory (you saw every add_item response). Only call this if you've genuinely lost track of the order state.",
       "method": "GET",
       "url": "${BASE_URL}/orders/{order_id}",
       "response_timeout_secs": 10,
@@ -115,7 +79,7 @@
     },
     {
       "name": "submit_order",
-      "description": "Finalize the order and send to the kitchen. Call AFTER the caller has confirmed the read-back. Returns order_number (read this back), total_cents, eta_minutes. After this, no more line edits — order is locked.",
+      "description": "Finalize the order and send to the kitchen. Call AFTER the caller confirms the read-back. Returns order_number (read this back), total_cents, eta_minutes. After this, no more line edits.",
       "method": "POST",
       "url": "${BASE_URL}/orders/{order_id}/submit",
       "response_timeout_secs": 10,
@@ -124,7 +88,7 @@
         { "name": "order_id", "type": "integer", "required": true }
       ],
       "body_parameters": [
-        { "name": "customer_name", "type": "string", "required": true, "description": "Ask 'Can I get a name for the order?' first." }
+        { "name": "customer_name", "type": "string", "required": true, "description": "Ask 'Can I get a name for the order?' before this call." }
       ]
     },
     {
