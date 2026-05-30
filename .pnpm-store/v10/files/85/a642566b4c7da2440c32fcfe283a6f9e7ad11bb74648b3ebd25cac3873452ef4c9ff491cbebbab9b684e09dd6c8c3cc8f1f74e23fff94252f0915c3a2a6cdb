@@ -1,0 +1,43 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+import { EndCallToolConfig } from "./EndCallToolConfig";
+import { KnowledgeBaseRagToolConfig } from "./KnowledgeBaseRagToolConfig";
+import { LanguageDetectionToolConfig } from "./LanguageDetectionToolConfig";
+import { LoadProcedureToolConfig } from "./LoadProcedureToolConfig";
+import { PlayDtmfToolConfig } from "./PlayDtmfToolConfig";
+import { SkipTurnToolConfig } from "./SkipTurnToolConfig";
+import { TransferToAgentToolConfig } from "./TransferToAgentToolConfig";
+import { TransferToNumberToolConfigInput } from "./TransferToNumberToolConfigInput";
+import { VoicemailDetectionToolConfig } from "./VoicemailDetectionToolConfig";
+export declare const SystemToolConfigInputParams: core.serialization.Schema<serializers.SystemToolConfigInputParams.Raw, ElevenLabs.SystemToolConfigInputParams>;
+export declare namespace SystemToolConfigInputParams {
+    type Raw = SystemToolConfigInputParams.EndCall | SystemToolConfigInputParams.KnowledgeBaseRag | SystemToolConfigInputParams.LanguageDetection | SystemToolConfigInputParams.LoadProcedure | SystemToolConfigInputParams.PlayKeypadTouchTone | SystemToolConfigInputParams.SkipTurn | SystemToolConfigInputParams.TransferToAgent | SystemToolConfigInputParams.TransferToNumber | SystemToolConfigInputParams.VoicemailDetection;
+    interface EndCall extends EndCallToolConfig.Raw {
+        system_tool_type: "end_call";
+    }
+    interface KnowledgeBaseRag extends KnowledgeBaseRagToolConfig.Raw {
+        system_tool_type: "knowledge_base_rag";
+    }
+    interface LanguageDetection extends LanguageDetectionToolConfig.Raw {
+        system_tool_type: "language_detection";
+    }
+    interface LoadProcedure extends LoadProcedureToolConfig.Raw {
+        system_tool_type: "load_procedure";
+    }
+    interface PlayKeypadTouchTone extends PlayDtmfToolConfig.Raw {
+        system_tool_type: "play_keypad_touch_tone";
+    }
+    interface SkipTurn extends SkipTurnToolConfig.Raw {
+        system_tool_type: "skip_turn";
+    }
+    interface TransferToAgent extends TransferToAgentToolConfig.Raw {
+        system_tool_type: "transfer_to_agent";
+    }
+    interface TransferToNumber extends TransferToNumberToolConfigInput.Raw {
+        system_tool_type: "transfer_to_number";
+    }
+    interface VoicemailDetection extends VoicemailDetectionToolConfig.Raw {
+        system_tool_type: "voicemail_detection";
+    }
+}

@@ -1,0 +1,38 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+import { McpApprovalPolicy } from "./McpApprovalPolicy";
+import { McpServerConfigInputAuthConnection } from "./McpServerConfigInputAuthConnection";
+import { McpServerConfigInputRequestHeadersValue } from "./McpServerConfigInputRequestHeadersValue";
+import { McpServerConfigInputSecretToken } from "./McpServerConfigInputSecretToken";
+import { McpServerConfigInputUrl } from "./McpServerConfigInputUrl";
+import { McpServerTransport } from "./McpServerTransport";
+import { McpToolApprovalHash } from "./McpToolApprovalHash";
+import { McpToolConfigOverrideInput } from "./McpToolConfigOverrideInput";
+import { PreToolSpeechMode } from "./PreToolSpeechMode";
+import { ToolCallSoundBehavior } from "./ToolCallSoundBehavior";
+import { ToolCallSoundType } from "./ToolCallSoundType";
+import { ToolExecutionMode } from "./ToolExecutionMode";
+export declare const McpServerConfigInput: core.serialization.ObjectSchema<serializers.McpServerConfigInput.Raw, ElevenLabs.McpServerConfigInput>;
+export declare namespace McpServerConfigInput {
+    interface Raw {
+        approval_policy?: McpApprovalPolicy.Raw | null;
+        tool_approval_hashes?: McpToolApprovalHash.Raw[] | null;
+        transport?: McpServerTransport.Raw | null;
+        url: McpServerConfigInputUrl.Raw;
+        secret_token?: McpServerConfigInputSecretToken.Raw | null;
+        request_headers?: Record<string, McpServerConfigInputRequestHeadersValue.Raw> | null;
+        auth_connection?: McpServerConfigInputAuthConnection.Raw | null;
+        name: string;
+        description?: string | null;
+        force_pre_tool_speech?: boolean | null;
+        pre_tool_speech?: PreToolSpeechMode.Raw | null;
+        disable_interruptions?: boolean | null;
+        tool_call_sound?: ToolCallSoundType.Raw | null;
+        tool_call_sound_behavior?: ToolCallSoundBehavior.Raw | null;
+        execution_mode?: ToolExecutionMode.Raw | null;
+        response_timeout_secs?: number | null;
+        tool_config_overrides?: McpToolConfigOverrideInput.Raw[] | null;
+        disable_compression?: boolean | null;
+    }
+}

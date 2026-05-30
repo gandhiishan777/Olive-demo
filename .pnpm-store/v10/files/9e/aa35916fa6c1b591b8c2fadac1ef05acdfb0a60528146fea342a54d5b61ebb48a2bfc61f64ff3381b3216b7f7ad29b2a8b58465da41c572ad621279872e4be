@@ -1,0 +1,35 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+import { AgentMetadata } from "./AgentMetadata";
+import { ChatSourceMedium } from "./ChatSourceMedium";
+import { ConversationHistoryMultivoiceMessageModel } from "./ConversationHistoryMultivoiceMessageModel";
+import { ConversationHistoryTranscriptCommonModelOutputRole } from "./ConversationHistoryTranscriptCommonModelOutputRole";
+import { ConversationHistoryTranscriptCommonModelOutputToolResultsItem } from "./ConversationHistoryTranscriptCommonModelOutputToolResultsItem";
+import { ConversationHistoryTranscriptToolCallCommonModelOutput } from "./ConversationHistoryTranscriptToolCallCommonModelOutput";
+import { ConversationTurnMetrics } from "./ConversationTurnMetrics";
+import { LlmUsageOutput } from "./LlmUsageOutput";
+import { RagRetrievalInfo } from "./RagRetrievalInfo";
+import { UserFeedback } from "./UserFeedback";
+export declare const ConversationHistoryTranscriptCommonModelOutput: core.serialization.ObjectSchema<serializers.ConversationHistoryTranscriptCommonModelOutput.Raw, ElevenLabs.ConversationHistoryTranscriptCommonModelOutput>;
+export declare namespace ConversationHistoryTranscriptCommonModelOutput {
+    interface Raw {
+        role: ConversationHistoryTranscriptCommonModelOutputRole.Raw;
+        agent_metadata?: AgentMetadata.Raw | null;
+        message?: string | null;
+        multivoice_message?: ConversationHistoryMultivoiceMessageModel.Raw | null;
+        tool_calls?: ConversationHistoryTranscriptToolCallCommonModelOutput.Raw[] | null;
+        tool_results?: ConversationHistoryTranscriptCommonModelOutputToolResultsItem.Raw[] | null;
+        feedback?: UserFeedback.Raw | null;
+        llm_override?: string | null;
+        time_in_call_secs: number;
+        conversation_turn_metrics?: ConversationTurnMetrics.Raw | null;
+        rag_retrieval_info?: RagRetrievalInfo.Raw | null;
+        llm_usage?: LlmUsageOutput.Raw | null;
+        interrupted?: boolean | null;
+        original_message?: string | null;
+        source_medium?: ChatSourceMedium.Raw | null;
+        source_event_id?: number | null;
+        used_static_kb_document_ids?: string[] | null;
+    }
+}

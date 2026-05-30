@@ -1,0 +1,9 @@
+/**
+ * Configuration for DTMF (keypad) input collection during phone calls.
+ */
+export interface DtmfInputConfig {
+    /** Timeout in seconds to wait for additional DTMF digits */
+    dtmfInputTimeout?: number;
+    /** If true, pressing # immediately completes DTMF input */
+    hashTerminator?: boolean;
+}

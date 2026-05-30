@@ -1,0 +1,25 @@
+import type * as ElevenLabs from "../index";
+export interface CreateSimulationTestRequest {
+    /** Metadata of a conversation this test was created from (if applicable). */
+    fromConversationMetadata?: ElevenLabs.TestFromConversationMetadataInput;
+    /** Dynamic variables to replace in the agent config during testing */
+    dynamicVariables?: Record<string, ElevenLabs.DynamicVariableValueTypeInput | undefined>;
+    chatHistory?: ElevenLabs.ConversationHistoryTranscriptCommonModelInput[];
+    /** A prompt that evaluates whether the agent's response is successful. Should return True or False. */
+    successCondition?: string;
+    /** Description of the simulation scenario and user persona for simulation tests. */
+    simulationScenario?: string;
+    /** Maximum number of conversation turns for simulation tests. */
+    simulationMaxTurns?: number;
+    /** The environment to use when running this simulation test. If not provided, defaults to 'production'. */
+    simulationEnvironment?: string;
+    /** Configuration for which tools to mock and fallback behavior. */
+    toolMockConfig?: ElevenLabs.SimulationToolMockBehaviorConfig;
+    /** LLM model to use for evaluating simulation results. Defaults to Claude Sonnet 4.6. */
+    evaluationModel?: ElevenLabs.Llm;
+    /** LLM model for the simulated user. Defaults to Claude Sonnet 4.6. */
+    simulatedUserModel?: ElevenLabs.Llm;
+    name: string;
+    /** The ID of the parent folder. If not provided, the test will be created at the root level. */
+    parentFolderId?: string;
+}

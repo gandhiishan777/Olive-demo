@@ -1,0 +1,15 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+export declare const ConversationUserResponseModel: core.serialization.ObjectSchema<serializers.ConversationUserResponseModel.Raw, ElevenLabs.ConversationUserResponseModel>;
+export declare namespace ConversationUserResponseModel {
+    interface Raw {
+        user_id: string;
+        last_contact_unix_secs: number;
+        first_contact_unix_secs: number;
+        conversation_count: number;
+        last_contact_agent_id?: string | null;
+        last_contact_conversation_id: string;
+        last_contact_agent_name?: string | null;
+    }
+}

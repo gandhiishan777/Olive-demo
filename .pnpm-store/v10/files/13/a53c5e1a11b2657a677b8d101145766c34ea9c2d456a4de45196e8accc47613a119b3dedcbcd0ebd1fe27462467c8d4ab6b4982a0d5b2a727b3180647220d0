@@ -1,0 +1,13 @@
+import type * as ElevenLabs from "../index";
+/**
+ * Single custom guardrail configuration
+ */
+export interface CustomGuardrailConfig {
+    isEnabled?: boolean;
+    /** User-facing name for this guardrail */
+    name: string;
+    /** Instruction describing what to block, e.g. 'don't talk about politics' */
+    prompt: string;
+    executionMode?: ElevenLabs.GuardrailExecutionMode;
+    triggerAction?: ElevenLabs.CustomGuardrailConfigTriggerAction;
+}

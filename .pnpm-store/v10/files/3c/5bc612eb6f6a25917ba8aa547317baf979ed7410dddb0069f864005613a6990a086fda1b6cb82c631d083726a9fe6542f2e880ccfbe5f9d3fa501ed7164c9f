@@ -1,0 +1,33 @@
+import type { BaseClientOptions } from "../../../../BaseClient";
+import { type NormalizedClientOptions } from "../../../../BaseClient";
+import { AnalyticsClient } from "../resources/analytics/client/Client";
+import { AuditLogsClient } from "../resources/auditLogs/client/Client";
+import { AuthConnectionsClient } from "../resources/authConnections/client/Client";
+import { GroupsClient } from "../resources/groups/client/Client";
+import { InvitesClient } from "../resources/invites/client/Client";
+import { MembersClient } from "../resources/members/client/Client";
+import { ResourcesClient } from "../resources/resources/client/Client";
+import { UsageClient } from "../resources/usage/client/Client";
+export declare namespace WorkspaceClient {
+    type Options = BaseClientOptions;
+}
+export declare class WorkspaceClient {
+    protected readonly _options: NormalizedClientOptions<WorkspaceClient.Options>;
+    protected _auditLogs: AuditLogsClient | undefined;
+    protected _authConnections: AuthConnectionsClient | undefined;
+    protected _groups: GroupsClient | undefined;
+    protected _invites: InvitesClient | undefined;
+    protected _members: MembersClient | undefined;
+    protected _resources: ResourcesClient | undefined;
+    protected _usage: UsageClient | undefined;
+    protected _analytics: AnalyticsClient | undefined;
+    constructor(options?: WorkspaceClient.Options);
+    get auditLogs(): AuditLogsClient;
+    get authConnections(): AuthConnectionsClient;
+    get groups(): GroupsClient;
+    get invites(): InvitesClient;
+    get members(): MembersClient;
+    get resources(): ResourcesClient;
+    get usage(): UsageClient;
+    get analytics(): AnalyticsClient;
+}

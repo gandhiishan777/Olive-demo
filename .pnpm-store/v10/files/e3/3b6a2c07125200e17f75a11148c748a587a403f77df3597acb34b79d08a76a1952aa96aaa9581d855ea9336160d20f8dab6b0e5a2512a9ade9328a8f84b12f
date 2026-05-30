@@ -1,0 +1,13 @@
+import type * as ElevenLabs from "../index";
+export type ApiIntegrationWebhookOverridesSchemaOverridesValue = ElevenLabs.ApiIntegrationWebhookOverridesSchemaOverridesValue.Constant | ElevenLabs.ApiIntegrationWebhookOverridesSchemaOverridesValue.DynamicVariable | ElevenLabs.ApiIntegrationWebhookOverridesSchemaOverridesValue.Llm;
+export declare namespace ApiIntegrationWebhookOverridesSchemaOverridesValue {
+    interface Constant extends ElevenLabs.ConstantSchemaOverride {
+        source: "constant";
+    }
+    interface DynamicVariable extends ElevenLabs.DynamicVariableSchemaOverride {
+        source: "dynamic_variable";
+    }
+    interface Llm extends ElevenLabs.LlmSchemaOverride {
+        source: "llm";
+    }
+}

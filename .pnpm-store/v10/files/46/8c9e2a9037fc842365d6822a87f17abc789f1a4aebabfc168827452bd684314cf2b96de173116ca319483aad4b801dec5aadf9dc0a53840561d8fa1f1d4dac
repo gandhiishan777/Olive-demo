@@ -1,0 +1,5 @@
+import type * as ElevenLabs from "../../../index";
+/**
+ * Receive transcription results from the WebSocket
+ */
+export type ReceiveTranscription = ElevenLabs.SessionStartedPayload | ElevenLabs.PartialTranscriptPayload | ElevenLabs.CommittedTranscriptPayload | ElevenLabs.CommittedTranscriptWithTimestampsPayload | ElevenLabs.ScribeErrorPayload | ElevenLabs.ScribeAuthErrorPayload | ElevenLabs.ScribeQuotaExceededErrorPayload | ElevenLabs.ScribeThrottledErrorPayload | ElevenLabs.ScribeUnacceptedTermsErrorPayload | ElevenLabs.ScribeRateLimitedErrorPayload | ElevenLabs.ScribeQueueOverflowErrorPayload | ElevenLabs.ScribeResourceExhaustedErrorPayload | ElevenLabs.ScribeSessionTimeLimitExceededErrorPayload | ElevenLabs.ScribeInputErrorPayload | ElevenLabs.ScribeChunkSizeExceededErrorPayload | ElevenLabs.ScribeInsufficientAudioActivityErrorPayload | ElevenLabs.ScribeTranscriberErrorPayload;

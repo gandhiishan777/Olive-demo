@@ -1,0 +1,15 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+import { DubOrderItemRequest } from "./DubOrderItemRequest";
+import { SubtitleOrderItemRequest } from "./SubtitleOrderItemRequest";
+export declare const RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindInput: core.serialization.Schema<serializers.RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindInput.Raw, ElevenLabs.RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindInput>;
+export declare namespace RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindInput {
+    type Raw = RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindInput.Dub | RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindInput.Subtitles;
+    interface Dub extends DubOrderItemRequest.Raw {
+        kind: "dub";
+    }
+    interface Subtitles extends SubtitleOrderItemRequest.Raw {
+        kind: "subtitles";
+    }
+}

@@ -1,0 +1,31 @@
+import type * as ElevenLabs from "../../../../../../index";
+/**
+ * @example
+ *     {}
+ */
+export interface McpServerConfigUpdateRequestModel {
+    /** The approval mode to set for the MCP server */
+    approvalPolicy?: ElevenLabs.McpApprovalPolicy;
+    /** DEPRECATED: use `pre_tool_speech` instead. If set, overrides the server's force_pre_tool_speech setting for this tool. */
+    forcePreToolSpeech?: boolean;
+    /** If set, overrides the server's pre_tool_speech setting for this tool. */
+    preToolSpeech?: ElevenLabs.PreToolSpeechMode;
+    /** If set, overrides the server's disable_interruptions setting for this tool */
+    disableInterruptions?: boolean;
+    /** Predefined tool call sound type to play during tool execution for all tools from this MCP server */
+    toolCallSound?: ElevenLabs.ToolCallSoundType;
+    /** Determines when the tool call sound should play for all tools from this MCP server */
+    toolCallSoundBehavior?: ElevenLabs.ToolCallSoundBehavior;
+    /** If set, overrides the server's execution_mode setting for this tool */
+    executionMode?: ElevenLabs.ToolExecutionMode;
+    /** The maximum time in seconds to wait for each MCP tool call to complete. */
+    responseTimeoutSecs?: number;
+    /** The headers to include in requests to the MCP server */
+    requestHeaders?: Record<string, ElevenLabs.conversationalAi.McpServerConfigUpdateRequestModelRequestHeadersValue | undefined>;
+    /** Whether to disable HTTP compression for this MCP server */
+    disableCompression?: boolean;
+    /** Optional secret token for authentication with this MCP server */
+    secretToken?: ElevenLabs.ConvAiSecretLocator;
+    /** Optional auth connection to use for authentication with this MCP server */
+    authConnection?: ElevenLabs.conversationalAi.McpServerConfigUpdateRequestModelAuthConnection;
+}

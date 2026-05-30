@@ -1,0 +1,19 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+import { ConstantSchemaOverride } from "./ConstantSchemaOverride";
+import { DynamicVariableSchemaOverride } from "./DynamicVariableSchemaOverride";
+import { LlmSchemaOverride } from "./LlmSchemaOverride";
+export declare const McpToolConfigOverrideInputInputOverridesValue: core.serialization.Schema<serializers.McpToolConfigOverrideInputInputOverridesValue.Raw, ElevenLabs.McpToolConfigOverrideInputInputOverridesValue>;
+export declare namespace McpToolConfigOverrideInputInputOverridesValue {
+    type Raw = McpToolConfigOverrideInputInputOverridesValue.Constant | McpToolConfigOverrideInputInputOverridesValue.DynamicVariable | McpToolConfigOverrideInputInputOverridesValue.Llm;
+    interface Constant extends ConstantSchemaOverride.Raw {
+        source: "constant";
+    }
+    interface DynamicVariable extends DynamicVariableSchemaOverride.Raw {
+        source: "dynamic_variable";
+    }
+    interface Llm extends LlmSchemaOverride.Raw {
+        source: "llm";
+    }
+}

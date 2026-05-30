@@ -1,0 +1,5 @@
+import type * as ElevenLabs from "../../../index";
+/**
+ * Receive translation results from the WebSocket
+ */
+export type ReceiveRttMessage = ElevenLabs.RttSessionStartedPayload | ElevenLabs.RttStatusPayload | ElevenLabs.RttPartialTranscriptPayload | ElevenLabs.RttFinalTranscriptPayload | ElevenLabs.RttTranslationPayload | ElevenLabs.RttAudioPayload | ElevenLabs.RttErrorPayload;

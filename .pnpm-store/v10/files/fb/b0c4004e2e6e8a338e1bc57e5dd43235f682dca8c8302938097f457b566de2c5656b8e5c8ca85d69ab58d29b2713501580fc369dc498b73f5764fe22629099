@@ -1,0 +1,17 @@
+/**
+ * @example
+ *     {
+ *         isDisabled: true,
+ *         name: "My Callback Webhook"
+ *     }
+ */
+export interface BodyUpdateWorkspaceWebhookV1WorkspaceWebhooksWebhookIdPatch {
+    /** Whether to disable or enable the webhook */
+    isDisabled: boolean;
+    /** The display name of the webhook (used for display purposes only). */
+    name: string;
+    /** Whether to enable automatic retries for transient failures (5xx, 429, timeout) */
+    retryEnabled?: boolean;
+    /** A list of request headers to include with the webhook delivery (optional) */
+    requestHeaders?: Record<string, string | undefined>;
+}

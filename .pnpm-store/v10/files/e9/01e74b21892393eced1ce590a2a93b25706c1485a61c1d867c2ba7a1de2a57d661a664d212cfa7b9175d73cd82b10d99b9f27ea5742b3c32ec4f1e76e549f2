@@ -1,0 +1,18 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+import { AnalysisPropertyConstantValue } from "./AnalysisPropertyConstantValue";
+import { AnalysisPropertyType } from "./AnalysisPropertyType";
+import { Llm } from "./Llm";
+export declare const AnalysisProperty: core.serialization.ObjectSchema<serializers.AnalysisProperty.Raw, ElevenLabs.AnalysisProperty>;
+export declare namespace AnalysisProperty {
+    interface Raw {
+        type: AnalysisPropertyType.Raw;
+        description?: string | null;
+        enum?: string[] | null;
+        is_system_provided?: boolean | null;
+        dynamic_variable?: string | null;
+        constant_value?: AnalysisPropertyConstantValue.Raw | null;
+        llm?: Llm.Raw | null;
+    }
+}

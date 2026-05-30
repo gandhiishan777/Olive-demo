@@ -1,0 +1,10 @@
+import type * as ElevenLabs from "../index";
+/**
+ * Response model for mTLS auth connections.
+ */
+export interface MtlsAuthResponse {
+    name: string;
+    provider: string;
+    id: string;
+    usedBy?: ElevenLabs.AuthConnectionDependencies;
+}

@@ -1,0 +1,13 @@
+/** Predefined background music preset identifiers. */
+export declare const BackgroundMusicPresetId: {
+    readonly Office2: "office2";
+    readonly Office1: "office1";
+    readonly Restaurant: "restaurant";
+    readonly City: "city";
+    readonly Typing: "typing";
+    readonly Elevator1: "elevator1";
+    readonly Elevator2: "elevator2";
+    readonly Elevator3: "elevator3";
+    readonly Elevator4: "elevator4";
+};
+export type BackgroundMusicPresetId = (typeof BackgroundMusicPresetId)[keyof typeof BackgroundMusicPresetId];

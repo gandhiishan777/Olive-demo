@@ -1,0 +1,35 @@
+import type { BaseClientOptions, BaseRequestOptions } from "../../../../../../BaseClient";
+import { type NormalizedClientOptions } from "../../../../../../BaseClient";
+import * as core from "../../../../../../core";
+import * as ElevenLabs from "../../../../../index";
+export declare namespace UsersClient {
+    type Options = BaseClientOptions;
+    interface RequestOptions extends BaseRequestOptions {
+    }
+}
+export declare class UsersClient {
+    protected readonly _options: NormalizedClientOptions<UsersClient.Options>;
+    constructor(options?: UsersClient.Options);
+    /**
+     * Get distinct users from conversations with pagination.
+     *
+     * @param {ElevenLabs.conversationalAi.UsersListRequest} request
+     * @param {UsersClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link ElevenLabs.UnprocessableEntityError}
+     *
+     * @example
+     *     await client.conversationalAi.users.list({
+     *         agentId: "agent_id",
+     *         branchId: "branch_id",
+     *         callStartBeforeUnix: 1,
+     *         callStartAfterUnix: 1,
+     *         search: "search",
+     *         pageSize: 1,
+     *         sortBy: "last_contact_unix_secs",
+     *         cursor: "cursor"
+     *     })
+     */
+    list(request?: ElevenLabs.conversationalAi.UsersListRequest, requestOptions?: UsersClient.RequestOptions): core.HttpResponsePromise<ElevenLabs.GetConversationUsersPageResponseModel>;
+    private __list;
+}

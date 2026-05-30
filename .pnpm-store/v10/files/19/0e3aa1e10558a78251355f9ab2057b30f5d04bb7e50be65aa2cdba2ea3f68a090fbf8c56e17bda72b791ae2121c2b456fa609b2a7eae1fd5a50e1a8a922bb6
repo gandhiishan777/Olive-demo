@@ -1,0 +1,7 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+export declare const Monitor: core.serialization.Schema<serializers.Monitor.Raw, ElevenLabs.Monitor>;
+export declare namespace Monitor {
+    type Raw = "elevated_conversation_failure_rate" | "elevated_tool_failure_rate";
+}

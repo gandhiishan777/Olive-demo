@@ -1,0 +1,14 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+import { AuthConnectionDependencies } from "./AuthConnectionDependencies";
+export declare const CustomHeaderAuthResponse: core.serialization.ObjectSchema<serializers.CustomHeaderAuthResponse.Raw, ElevenLabs.CustomHeaderAuthResponse>;
+export declare namespace CustomHeaderAuthResponse {
+    interface Raw {
+        name: string;
+        provider: string;
+        header_name: string;
+        id: string;
+        used_by?: AuthConnectionDependencies.Raw | null;
+    }
+}

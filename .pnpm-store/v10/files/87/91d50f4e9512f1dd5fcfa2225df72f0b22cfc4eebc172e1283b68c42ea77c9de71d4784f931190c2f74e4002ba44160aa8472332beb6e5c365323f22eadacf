@@ -1,0 +1,32 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+import { ApiIntegrationWebhookOverrides } from "./ApiIntegrationWebhookOverrides";
+import { DynamicVariableAssignment } from "./DynamicVariableAssignment";
+import { DynamicVariablesConfigOutput } from "./DynamicVariablesConfigOutput";
+import { PreToolSpeechMode } from "./PreToolSpeechMode";
+import { ToolCallSoundBehavior } from "./ToolCallSoundBehavior";
+import { ToolCallSoundType } from "./ToolCallSoundType";
+import { ToolErrorHandlingMode } from "./ToolErrorHandlingMode";
+import { ToolExecutionMode } from "./ToolExecutionMode";
+export declare const ApiIntegrationWebhookToolConfigOutput: core.serialization.ObjectSchema<serializers.ApiIntegrationWebhookToolConfigOutput.Raw, ElevenLabs.ApiIntegrationWebhookToolConfigOutput>;
+export declare namespace ApiIntegrationWebhookToolConfigOutput {
+    interface Raw {
+        name: string;
+        description: string;
+        response_timeout_secs: number;
+        disable_interruptions: boolean;
+        force_pre_tool_speech: boolean;
+        pre_tool_speech: PreToolSpeechMode.Raw;
+        assignments: DynamicVariableAssignment.Raw[];
+        tool_call_sound?: ToolCallSoundType.Raw | null;
+        tool_call_sound_behavior: ToolCallSoundBehavior.Raw;
+        tool_error_handling_mode: ToolErrorHandlingMode.Raw;
+        dynamic_variables: DynamicVariablesConfigOutput.Raw;
+        execution_mode: ToolExecutionMode.Raw;
+        tool_version: string;
+        api_integration_id: string;
+        api_integration_connection_id: string;
+        api_schema_overrides?: ApiIntegrationWebhookOverrides.Raw | null;
+    }
+}

@@ -1,0 +1,5 @@
+import type * as ElevenLabs from "../../../index";
+/**
+ * Receive messages from the multi-context WebSocket.
+ */
+export type ReceiveMessageMulti = ElevenLabs.AudioOutputMulti | ElevenLabs.FinalOutputMulti;

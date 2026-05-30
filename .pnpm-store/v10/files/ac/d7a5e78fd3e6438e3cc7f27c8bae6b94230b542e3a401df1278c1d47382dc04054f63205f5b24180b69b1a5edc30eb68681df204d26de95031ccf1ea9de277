@@ -1,0 +1,19 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+import { PositionInput } from "./PositionInput";
+import { TransferTypeEnum } from "./TransferTypeEnum";
+import { WorkflowPhoneNumberNodeModelInputCustomSipHeadersItem } from "./WorkflowPhoneNumberNodeModelInputCustomSipHeadersItem";
+import { WorkflowPhoneNumberNodeModelInputPostDialDigits } from "./WorkflowPhoneNumberNodeModelInputPostDialDigits";
+import { WorkflowPhoneNumberNodeModelInputTransferDestination } from "./WorkflowPhoneNumberNodeModelInputTransferDestination";
+export declare const WorkflowPhoneNumberNodeModelInput: core.serialization.ObjectSchema<serializers.WorkflowPhoneNumberNodeModelInput.Raw, ElevenLabs.WorkflowPhoneNumberNodeModelInput>;
+export declare namespace WorkflowPhoneNumberNodeModelInput {
+    interface Raw {
+        custom_sip_headers?: WorkflowPhoneNumberNodeModelInputCustomSipHeadersItem.Raw[] | null;
+        transfer_destination: WorkflowPhoneNumberNodeModelInputTransferDestination.Raw;
+        transfer_type?: TransferTypeEnum.Raw | null;
+        post_dial_digits?: WorkflowPhoneNumberNodeModelInputPostDialDigits.Raw | null;
+        position?: PositionInput.Raw | null;
+        edge_order?: string[] | null;
+    }
+}

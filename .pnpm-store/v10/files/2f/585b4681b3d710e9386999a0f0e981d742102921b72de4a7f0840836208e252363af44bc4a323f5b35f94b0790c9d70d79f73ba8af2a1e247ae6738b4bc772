@@ -1,0 +1,8 @@
+import type * as ElevenLabs from "../index";
+export interface KnowledgeBaseRagToolResultModel {
+    status?: ElevenLabs.KnowledgeBaseRagToolStatus;
+    /** Number of relevant chunks retrieved */
+    chunkCount?: number;
+    /** Human-readable status for the LLM about the search results */
+    message?: string;
+}

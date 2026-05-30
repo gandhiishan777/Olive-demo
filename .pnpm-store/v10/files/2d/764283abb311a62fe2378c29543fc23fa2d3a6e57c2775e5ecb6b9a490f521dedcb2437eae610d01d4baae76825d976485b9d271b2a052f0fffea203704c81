@@ -1,0 +1,10 @@
+import type * as ElevenLabs from "../index";
+export type RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindOutput = ElevenLabs.RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindOutput.Dub | ElevenLabs.RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindOutput.Subtitles;
+export declare namespace RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindOutput {
+    interface Dub extends ElevenLabs.DubOrderItemRequest {
+        kind: "dub";
+    }
+    interface Subtitles extends ElevenLabs.SubtitleOrderItemRequest {
+        kind: "subtitles";
+    }
+}

@@ -1,0 +1,12 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+import { ItemId } from "./ItemId";
+import { RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindInput } from "./RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindInput";
+export declare const UpsertOrderItemRequest: core.serialization.ObjectSchema<serializers.UpsertOrderItemRequest.Raw, ElevenLabs.UpsertOrderItemRequest>;
+export declare namespace UpsertOrderItemRequest {
+    interface Raw {
+        item: RootModelAnnotatedUnionDubOrderItemRequestSubtitleOrderItemRequestFieldInfoAnnotationNoneTypeRequiredTrueDiscriminatorKindInput.Raw;
+        item_id?: ItemId.Raw | null;
+    }
+}

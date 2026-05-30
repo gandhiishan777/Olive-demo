@@ -75,7 +75,8 @@ export const POST = withErrorHandler(async (req: NextRequest, ctx: Params) => {
       item_name: item.name,
       quantity: parsed.data.quantity,
       unit_price_cents: item.price_cents,
-      modifiers: parsed.data.modifiers ?? null,
+      // modifiers is NOT NULL in the DB — default to an empty object.
+      modifiers: parsed.data.modifiers ?? {},
       notes: parsed.data.notes ?? null,
     })
     .select("*")

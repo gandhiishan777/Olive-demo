@@ -1,0 +1,11 @@
+import type * as ElevenLabs from "../index";
+export interface PhoneNumberTransfer {
+    /** Custom SIP headers to include when transferring the call. Each header can be either a static value or a dynamic variable reference. */
+    customSipHeaders?: ElevenLabs.PhoneNumberTransferCustomSipHeadersItem[];
+    transferDestination: ElevenLabs.PhoneNumberTransferTransferDestination;
+    transferType?: ElevenLabs.TransferTypeEnum;
+    /** DTMF digits to send after call connects (e.g., 'ww1234' for extension). Can be either a static value or a dynamic variable reference. Use 'w' for 0.5s pause. Only supported for Twilio transfers. */
+    postDialDigits?: ElevenLabs.PhoneNumberTransferPostDialDigits;
+    phoneNumber?: string;
+    condition: string;
+}

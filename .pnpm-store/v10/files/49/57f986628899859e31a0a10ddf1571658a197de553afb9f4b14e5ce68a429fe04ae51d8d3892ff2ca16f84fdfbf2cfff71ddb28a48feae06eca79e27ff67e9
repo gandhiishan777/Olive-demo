@@ -1,0 +1,18 @@
+import type * as ElevenLabs from "../../../../index";
+/**
+ * @example
+ *     {}
+ */
+export interface UpdateSpeechEngineRequest {
+    name?: string;
+    speechEngine?: ElevenLabs.SpeechEngineConfig;
+    asr?: ElevenLabs.AsrConversationalConfig;
+    tts?: ElevenLabs.TtsConversationalConfigInput;
+    turn?: ElevenLabs.BaseTurnConfig;
+    conversation?: ElevenLabs.ConversationConfigInput;
+    privacy?: ElevenLabs.PrivacyConfigInput;
+    callLimits?: ElevenLabs.AgentCallLimits;
+    language?: string;
+    tags?: string[];
+    overrides?: ElevenLabs.SpeechEngineConversationInitiationClientDataConfig;
+}

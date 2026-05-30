@@ -1,0 +1,12 @@
+import type * as ElevenLabs from "../index";
+export interface WorkspaceGroupResponseModel {
+    name: string;
+    id: string;
+    members: string[];
+    permissions?: ElevenLabs.WorkspaceGroupPermission[];
+    groupUsageLimit?: ElevenLabs.WorkspaceGroupResponseModelGroupUsageLimit;
+    groupPvcLimit?: ElevenLabs.WorkspaceGroupResponseModelGroupPvcLimit;
+    characterCount?: number;
+    scimExternalId?: string;
+    isScimSynced?: boolean;
+}

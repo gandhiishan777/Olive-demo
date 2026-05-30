@@ -1,0 +1,12 @@
+export interface GetWhatsAppAccountResponse {
+    businessAccountId: string;
+    phoneNumberId: string;
+    businessAccountName: string;
+    phoneNumberName: string;
+    phoneNumber: string;
+    assignedAgentId?: string;
+    enableMessaging?: boolean;
+    enableAudioMessageResponse?: boolean;
+    assignedAgentName?: string;
+    isTokenExpired?: boolean;
+}

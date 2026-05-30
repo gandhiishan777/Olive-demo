@@ -1,0 +1,5 @@
+import type * as ElevenLabs from "../../../index";
+/**
+ * Send messages to the WebSocket
+ */
+export type SendMessage = ElevenLabs.InitializeConnection | ElevenLabs.SendText | ElevenLabs.CloseConnection;

@@ -1,0 +1,11 @@
+import type * as ElevenLabs from "../index";
+export interface TransferToAgentToolResultSuccessModel {
+    status?: "success";
+    fromAgent: string;
+    toAgent: string;
+    condition: string;
+    delayMs?: number;
+    transferMessage?: string;
+    enableTransferredAgentFirstMessage?: boolean;
+    branchInfo?: ElevenLabs.TransferToAgentToolResultSuccessModelBranchInfo;
+}

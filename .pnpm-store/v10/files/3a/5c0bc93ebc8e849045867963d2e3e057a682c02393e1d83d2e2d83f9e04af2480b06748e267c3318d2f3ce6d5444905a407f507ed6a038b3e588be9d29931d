@@ -1,0 +1,13 @@
+import type * as ElevenLabs from "../index";
+export interface CreateSipTrunkPhoneNumberRequest {
+    /** Phone number */
+    phoneNumber: string;
+    /** Label for the phone number */
+    label: string;
+    /** This field is deprecated and will be removed in the future. Whether this phone number supports inbound calls */
+    supportsInbound?: boolean;
+    /** This field is deprecated and will be removed in the future. Whether this phone number supports outbound calls */
+    supportsOutbound?: boolean;
+    inboundTrunkConfig?: ElevenLabs.InboundSipTrunkConfigRequestModel;
+    outboundTrunkConfig?: ElevenLabs.OutboundSipTrunkConfigRequestModel;
+}

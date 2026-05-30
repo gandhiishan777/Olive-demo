@@ -1,0 +1,11 @@
+import type * as ElevenLabs from "../index";
+/**
+ * Response model for basic auth
+ */
+export interface BasicAuthResponse {
+    name: string;
+    provider: string;
+    username: string;
+    id: string;
+    usedBy?: ElevenLabs.AuthConnectionDependencies;
+}

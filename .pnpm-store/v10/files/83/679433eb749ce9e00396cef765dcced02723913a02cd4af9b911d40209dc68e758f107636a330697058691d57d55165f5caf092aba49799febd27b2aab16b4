@@ -1,0 +1,30 @@
+import type * as ElevenLabs from "../index";
+export interface CaptionStyleModel {
+    template?: ElevenLabs.CaptionStyleTemplateModel;
+    textFont?: string;
+    textScale?: number;
+    textColor?: string;
+    textAlign?: ElevenLabs.CaptionStyleModelTextAlign;
+    textStyle?: ElevenLabs.CaptionStyleModelTextStyle;
+    textWeight?: ElevenLabs.CaptionStyleModelTextWeight;
+    textTransform?: ElevenLabs.CaptionStyleModelTextTransform;
+    textBlendMode?: ElevenLabs.CaptionStyleModelTextBlendMode;
+    textShadow?: ElevenLabs.StudioTextStyleShadowModel;
+    textOutline?: ElevenLabs.StudioTextStyleOutlineModel;
+    backgroundEnabled?: boolean;
+    backgroundColor?: string;
+    backgroundOpacity?: number;
+    wordHighlightsEnabled?: boolean;
+    wordHighlightsColor?: string;
+    wordHighlightsBackgroundColor?: string;
+    wordHighlightsOpacity?: number;
+    sectionAnimation?: ElevenLabs.CaptionStyleSectionAnimationModel;
+    wordAnimation?: ElevenLabs.CaptionStyleWordAnimationModel;
+    characterAnimation?: ElevenLabs.CaptionStyleCharacterAnimationModel;
+    widthPct?: number;
+    horizontalPlacement?: ElevenLabs.CaptionStyleHorizontalPlacementModel;
+    verticalPlacement?: ElevenLabs.CaptionStyleVerticalPlacementModel;
+    autoBreakEnabled?: boolean;
+    maxLinesPerSection?: number;
+    maxWordsPerLine?: number;
+}

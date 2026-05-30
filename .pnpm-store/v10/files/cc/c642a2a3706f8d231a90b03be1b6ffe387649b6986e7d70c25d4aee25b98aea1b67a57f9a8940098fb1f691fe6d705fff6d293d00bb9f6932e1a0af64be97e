@@ -1,0 +1,10 @@
+import type * as ElevenLabs from "../../api/index";
+import * as core from "../../core";
+import type * as serializers from "../index";
+export declare const FileInputConfig: core.serialization.ObjectSchema<serializers.FileInputConfig.Raw, ElevenLabs.FileInputConfig>;
+export declare namespace FileInputConfig {
+    interface Raw {
+        enabled?: boolean | null;
+        max_files_per_conversation?: number | null;
+    }
+}

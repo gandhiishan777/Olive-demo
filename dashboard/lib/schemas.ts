@@ -21,6 +21,12 @@ export const PatchOrderBody = z.object({
   status: z.literal("completed"),
 });
 
+// POST /api/orders/:id/submit — optional name captured by the agent at the
+// end of the call, written as the order is finalized. Body may be empty.
+export const SubmitOrderBody = z.object({
+  customer_name: z.string().min(1).max(120).optional(),
+});
+
 // POST /api/orders/:id/items
 export const AddItemBody = z.object({
   item_id: z.number().int().positive(),

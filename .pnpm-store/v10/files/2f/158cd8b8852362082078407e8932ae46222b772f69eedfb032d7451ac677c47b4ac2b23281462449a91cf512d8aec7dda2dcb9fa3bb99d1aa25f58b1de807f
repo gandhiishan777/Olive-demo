@@ -1,0 +1,19 @@
+import type * as ElevenLabs from "../index";
+/**
+ * An evaluation using the transcript and a prompt for a yes/no achieved answer
+ */
+export interface PromptEvaluationCriteria {
+    /** The unique identifier for the evaluation criteria */
+    id: string;
+    name: string;
+    /** The type of evaluation criteria */
+    type?: "prompt";
+    /** The prompt that the agent should use to evaluate the conversation */
+    conversationGoalPrompt: string;
+    /** When evaluating the prompt, should the agent's knowledge base be used. */
+    useKnowledgeBase?: boolean;
+    /** The scope of transcript context used when evaluating this criterion. 'conversation' uses the full transcript; 'agent' uses only the portion where the defining agent was active. */
+    scope?: ElevenLabs.AnalysisScope;
+    /** LLM model to use for this evaluation criteria. If not set, uses agent's analysis_llm default. */
+    llm?: ElevenLabs.Llm;
+}

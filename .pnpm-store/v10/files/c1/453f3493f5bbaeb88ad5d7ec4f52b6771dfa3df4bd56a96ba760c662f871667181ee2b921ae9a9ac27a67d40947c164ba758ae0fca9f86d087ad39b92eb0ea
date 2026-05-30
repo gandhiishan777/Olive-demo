@@ -1,0 +1,21 @@
+import type * as ElevenLabs from "../index";
+export interface ConversationSummaryResponseModel {
+    agentId: string;
+    branchId?: string;
+    versionId?: string;
+    agentName?: string;
+    conversationId: string;
+    startTimeUnixSecs: number;
+    callDurationSecs: number;
+    messageCount: number;
+    status: ElevenLabs.ConversationSummaryResponseModelStatus;
+    terminationReason?: string;
+    callSuccessful: ElevenLabs.EvaluationSuccessResult;
+    transcriptSummary?: string;
+    callSummaryTitle?: string;
+    mainLanguage?: string;
+    conversationInitiationSource?: ElevenLabs.ConversationInitiationSource;
+    toolNames?: string[];
+    direction?: ElevenLabs.TelephonyDirection;
+    rating?: number;
+}

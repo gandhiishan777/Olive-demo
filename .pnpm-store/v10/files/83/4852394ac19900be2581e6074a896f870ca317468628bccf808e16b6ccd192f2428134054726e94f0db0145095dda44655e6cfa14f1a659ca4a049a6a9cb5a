@@ -1,0 +1,9 @@
+/**
+ * Final transcription of a completed segment.
+ */
+export interface RttFinalTranscriptPayload {
+    /** The message type identifier. */
+    messageType: "final_transcript";
+    /** Final transcription text. */
+    text: string;
+}
