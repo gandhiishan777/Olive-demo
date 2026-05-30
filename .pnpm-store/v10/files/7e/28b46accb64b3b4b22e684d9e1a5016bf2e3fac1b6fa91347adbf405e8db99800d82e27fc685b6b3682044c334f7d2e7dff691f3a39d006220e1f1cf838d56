@@ -1,9 +1,0 @@
-/**
- * Payload for error events during transcription.
- */
-export interface ScribeErrorPayload {
-    /** The message type identifier. */
-    messageType: "error";
-    /** Error message describing what went wrong. */
-    error: string;
-}

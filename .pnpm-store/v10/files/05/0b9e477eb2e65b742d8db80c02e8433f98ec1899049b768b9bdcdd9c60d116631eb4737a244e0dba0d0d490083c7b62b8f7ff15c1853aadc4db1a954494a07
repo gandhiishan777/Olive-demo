@@ -1,7 +1,0 @@
-import type * as ElevenLabs from "../index";
-export interface CreateAuthConnectionEnvironmentVariableRequest {
-    /** Unique label for the environment variable. */
-    label: string;
-    /** Environment-specific auth connection references. Must include 'production' key. */
-    values: Record<string, ElevenLabs.EnvironmentVariableAuthConnectionValueRequest>;
-}

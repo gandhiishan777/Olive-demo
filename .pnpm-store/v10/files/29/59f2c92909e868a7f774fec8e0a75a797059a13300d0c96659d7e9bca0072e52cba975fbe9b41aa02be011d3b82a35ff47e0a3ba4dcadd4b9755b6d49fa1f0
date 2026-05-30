@@ -1,5 +1,0 @@
-export declare const Monitor: {
-    readonly ElevatedConversationFailureRate: "elevated_conversation_failure_rate";
-    readonly ElevatedToolFailureRate: "elevated_tool_failure_rate";
-};
-export type Monitor = (typeof Monitor)[keyof typeof Monitor];

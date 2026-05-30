@@ -1,9 +1,0 @@
-import type * as ElevenLabs from "../index";
-export interface AstConditionalOperatorNodeOutput {
-    /** Condition deciding which expression should be selected. */
-    condition: ElevenLabs.AstNodeOutput;
-    /** Expression selected if the condition is true. */
-    trueExpression: ElevenLabs.AstNodeOutput;
-    /** Expression selected if the condition is false. */
-    falseExpression: ElevenLabs.AstNodeOutput;
-}

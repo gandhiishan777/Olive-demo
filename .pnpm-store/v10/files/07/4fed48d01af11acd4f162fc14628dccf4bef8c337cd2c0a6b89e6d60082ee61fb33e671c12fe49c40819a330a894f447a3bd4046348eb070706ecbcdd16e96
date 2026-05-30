@@ -1,8 +1,0 @@
-import type * as ElevenLabs from "../index";
-export interface WhatsAppAuthResponse {
-    name: string;
-    provider?: "whatsapp";
-    phoneNumberId: string;
-    id: string;
-    usedBy?: ElevenLabs.AuthConnectionDependencies;
-}

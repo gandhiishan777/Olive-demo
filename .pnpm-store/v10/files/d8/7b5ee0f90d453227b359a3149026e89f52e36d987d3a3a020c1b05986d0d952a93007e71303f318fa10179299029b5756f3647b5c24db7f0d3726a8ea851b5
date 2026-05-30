@@ -1,5 +1,0 @@
-import type * as ElevenLabs from "../index";
-export interface OrderDeliverablesResponse {
-    /** The list of delivered files for the order. Empty if the order is not yet completed. */
-    deliverables: ElevenLabs.DeliverableInfo[];
-}

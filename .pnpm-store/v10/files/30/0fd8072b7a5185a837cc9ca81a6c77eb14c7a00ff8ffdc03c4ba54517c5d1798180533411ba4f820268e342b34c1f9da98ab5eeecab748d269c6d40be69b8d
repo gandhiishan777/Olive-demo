@@ -1,5 +1,0 @@
-export declare const ProcedureCompilerMode: {
-    readonly Append: "append";
-    readonly Skills: "skills";
-};
-export type ProcedureCompilerMode = (typeof ProcedureCompilerMode)[keyof typeof ProcedureCompilerMode];

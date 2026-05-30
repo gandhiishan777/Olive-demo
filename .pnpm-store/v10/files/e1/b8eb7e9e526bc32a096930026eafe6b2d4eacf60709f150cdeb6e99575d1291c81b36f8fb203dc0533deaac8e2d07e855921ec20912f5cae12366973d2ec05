@@ -1,7 +1,0 @@
-import type * as ElevenLabs from "../index";
-export interface LlmLiteralJsonSchemaProperty {
-    type: ElevenLabs.LlmLiteralJsonSchemaPropertyType;
-    description: string;
-    /** List of allowed string values for string type parameters */
-    enum?: string[];
-}

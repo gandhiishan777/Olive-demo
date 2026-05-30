@@ -1,7 +1,0 @@
-import type * as ElevenLabs from "../index";
-export interface GetToolDependentAgentsResponseModel {
-    agents: ElevenLabs.GetToolDependentAgentsResponseModelAgentsItem[];
-    branches?: ElevenLabs.DependentBranchInfo[];
-    nextCursor?: string;
-    hasMore: boolean;
-}

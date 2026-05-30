@@ -1,3 +1,0 @@
-export type { BodySetRulesOnThePronunciationDictionaryV1PronunciationDictionariesPronunciationDictionaryIdSetRulesPost } from "./BodySetRulesOnThePronunciationDictionaryV1PronunciationDictionariesPronunciationDictionaryIdSetRulesPost";
-export type { PronunciationDictionary } from "./PronunciationDictionary";
-export type { RemovePronunciationDictionaryRulesRequest } from "./RemovePronunciationDictionaryRulesRequest";

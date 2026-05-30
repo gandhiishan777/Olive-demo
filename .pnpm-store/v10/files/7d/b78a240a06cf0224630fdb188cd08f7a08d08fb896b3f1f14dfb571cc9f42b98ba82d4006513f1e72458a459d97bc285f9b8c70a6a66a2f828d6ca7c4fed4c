@@ -1,6 +1,0 @@
-export interface LanguageInfo {
-    /** The language code (e.g. 'en', 'fr', 'es-ES'). */
-    code: string;
-    /** The human-readable language name (e.g. 'English', 'French', 'Spanish (Spain)'). */
-    label: string;
-}

@@ -1,4 +1,0 @@
-export interface QuoteInfo {
-    /** The quoted price for this item in USD. Use the order's total_amount_usd for the combined order total. */
-    amountUsd: number;
-}

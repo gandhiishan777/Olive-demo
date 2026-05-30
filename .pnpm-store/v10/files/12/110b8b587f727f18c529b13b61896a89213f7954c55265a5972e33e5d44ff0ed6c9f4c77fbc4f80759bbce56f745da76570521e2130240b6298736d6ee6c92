@@ -1,9 +1,0 @@
-import type * as ElevenLabs from "../index";
-/**
- * Dependencies that use an auth connection
- */
-export interface AuthConnectionDependencies {
-    tools?: ElevenLabs.AuthConnectionDependenciesToolsItem[];
-    mcpServers?: ElevenLabs.AuthConnectionDependenciesMcpServersItem[];
-    integrationConnections?: ElevenLabs.DependentIntegrationConnectionIdentifier[];
-}

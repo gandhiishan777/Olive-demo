@@ -1,6 +1,0 @@
-/**
- * OCSF Severity levels.
- *
- * Spec: https://schema.ocsf.io/1.6.0/objects/severity_id
- */
-export type SeverityId = number;

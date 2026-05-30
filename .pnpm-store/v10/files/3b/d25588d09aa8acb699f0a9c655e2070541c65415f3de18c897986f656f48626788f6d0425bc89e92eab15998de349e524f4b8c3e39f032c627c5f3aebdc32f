@@ -1,6 +1,0 @@
-import type * as ElevenLabs from "../index";
-export interface GetWorkspaceSecretsResponseModel {
-    secrets: ElevenLabs.ConvAiWorkspaceStoredSecretConfig[];
-    /** Cursor for fetching the next page of secrets */
-    nextCursor?: string;
-}

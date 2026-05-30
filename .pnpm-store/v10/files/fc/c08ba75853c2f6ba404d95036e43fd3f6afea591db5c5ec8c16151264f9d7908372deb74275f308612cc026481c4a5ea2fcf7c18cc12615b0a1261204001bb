@@ -1,6 +1,0 @@
-import type * as ElevenLabs from "../index";
-export interface GetSecretDependenciesResponseModel {
-    dependencies: ElevenLabs.GetSecretDependenciesResponseModelDependencies;
-    /** Cursor for fetching the next page of dependencies */
-    nextCursor?: string;
-}

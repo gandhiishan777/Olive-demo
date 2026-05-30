@@ -1,7 +1,0 @@
-import type * as ElevenLabs from "../index";
-export interface ConversationHistoryRedactionConfig {
-    /** Whether conversation history redaction is enabled */
-    enabled?: boolean;
-    /** The entities to redact from the conversation transcript, audio and analysis. Use top-level types like 'name', 'email_address', or dot notation for specific subtypes like 'name.full_name'. */
-    entities?: ElevenLabs.ConfigEntityType[];
-}

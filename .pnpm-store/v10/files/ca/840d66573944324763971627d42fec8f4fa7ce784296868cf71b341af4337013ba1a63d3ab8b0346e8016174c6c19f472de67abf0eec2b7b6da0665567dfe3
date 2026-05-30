@@ -1,4 +1,0 @@
-/**
- * Maximum number of credits that the credit limit can be exceeded by. Managed by the workspace admin. `"unlimited"` means no cap, `0` means usage-based billing is disabled.
- */
-export type SubscriptionResponseModelMaxCreditLimitExtension = number | "unlimited";

@@ -1,0 +1,15 @@
+# deps
+node_modules/
+
+# env / secrets (ELEVENLABS_API_KEY, NGROK_BASE_URL, etc.)
+.env
+.env.local
+.env*.local
+
+# build / tooling
+*.tsbuildinfo
+dist/
+*.log
+
+# os / editor
+.DS_Store

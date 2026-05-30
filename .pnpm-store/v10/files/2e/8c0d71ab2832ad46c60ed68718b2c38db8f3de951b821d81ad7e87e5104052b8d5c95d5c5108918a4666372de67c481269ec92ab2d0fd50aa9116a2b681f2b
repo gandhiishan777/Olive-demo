@@ -1,7 +1,0 @@
-/**
- * Signal that the client has finished sending audio.
- */
-export interface RttEndOfStreamPayload {
-    /** The message type identifier. */
-    messageType: "end_of_stream";
-}

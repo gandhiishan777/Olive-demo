@@ -1,1 +1,0 @@
-export { UpdateEnvironmentVariableRequest } from "./UpdateEnvironmentVariableRequest";

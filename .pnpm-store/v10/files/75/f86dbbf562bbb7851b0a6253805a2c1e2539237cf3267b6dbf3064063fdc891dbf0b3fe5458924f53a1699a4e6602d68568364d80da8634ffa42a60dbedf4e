@@ -1,5 +1,0 @@
-export declare const LoadProcedureToolErrorStatus: {
-    readonly NotFound: "not_found";
-    readonly InvalidName: "invalid_name";
-};
-export type LoadProcedureToolErrorStatus = (typeof LoadProcedureToolErrorStatus)[keyof typeof LoadProcedureToolErrorStatus];
